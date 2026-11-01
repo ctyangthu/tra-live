@@ -1,0 +1,46 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    # 04:30 Asia/Taipei, after TRA publishes the day's timetable files (about 03:40)
+    - cron: "30 20 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Refresh timetable from TRA open data
+        run: |
+          if python tools/fetch_timetable.py raw && python tools/extract_emu3000.py raw data/emu3000.json; then
+            echo "Timetable refreshed"
+          else
+            echo "::warning::Could not refresh the TRA timetable; building with the committed data/emu3000.json"
+            git checkout -- data/emu3000.json
+          fi
+      - name: Build site
+        run: python tools/build.py
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - id: deployment
+        uses: actions/deploy-pages@v4

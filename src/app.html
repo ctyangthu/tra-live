@@ -1,0 +1,1077 @@
+<title>台鐵環島動態系統</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sofia+Sans+Condensed:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
+<style>
+/* Layout: one-screen operations console. Portrait map of Taiwan with the round-island loop on the
+   left, a rail of cards on the right (day summary → selected train → tabs). Stacks on phones.
+   Track is drawn as the classic black-and-white railway symbol; 順行 blue, 逆行 orange. */
+:root{
+  --bg:#E9EDEA; --surface:#FFFFFF; --surface-2:#F1F4F1; --ink:#141A18; --muted:#58645F; --rule:#D2D9D4;
+  --sea:#D1E0E2; --land:#F8F7F1; --county:#CAD2CC; --coast:#879792; --branch:#97A39E;
+  --accent:#0D6A5A; --accent-ink:#FFFFFF; --accent-soft:#D5EAE3;
+  --cw:#1E5BAA; --ccw:#C95A12; --cw-soft:#DCE6F4; --ccw-soft:#F6E3D4;
+  --track:#1D2422; --track-casing:#FFFFFF;
+  --train-white:#FBFBF8; --train-black:#16191B; --train-gold:#B08A3E;
+  --board-bg:#0D1011; --board-ink:#ECECE4; --board-amber:#FFA23A; --board-green:#5BD08D; --board-dim:#7A8581; --board-rule:#252D2B;
+  --live:#1E9E5A; --tno-ink:#FFFFFF;
+  --font-display:"Sofia Sans Condensed","Noto Sans TC",system-ui,sans-serif;
+  --font-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0B100F; --surface:#121918; --surface-2:#1A2422; --ink:#E3EAE7; --muted:#92A09B; --rule:#24302D;
+    --sea:#08100F; --land:#18211F; --county:#2C3936; --coast:#4B5C57; --branch:#55645F;
+    --accent:#3FBF9F; --accent-ink:#0B100F; --accent-soft:#183A32;
+    --cw:#6FA6EE; --ccw:#F08A45; --cw-soft:#1B2B42; --ccw-soft:#3A2618;
+    --track:#E3EAE7; --track-casing:#0B100F; --tno-ink:#0B100F;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0B100F; --surface:#121918; --surface-2:#1A2422; --ink:#E3EAE7; --muted:#92A09B; --rule:#24302D;
+  --sea:#08100F; --land:#18211F; --county:#2C3936; --coast:#4B5C57; --branch:#55645F;
+  --accent:#3FBF9F; --accent-ink:#0B100F; --accent-soft:#183A32;
+  --cw:#6FA6EE; --ccw:#F08A45; --cw-soft:#1B2B42; --ccw-soft:#3A2618;
+  --track:#E3EAE7; --track-casing:#0B100F; --tno-ink:#0B100F;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.5}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-family:var(--font-display);font-variant-numeric:tabular-nums;letter-spacing:.01em}
+
+.app{display:flex;flex-direction:column;height:100%}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+
+/* ── header ─────────────────────────────── */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--rule);
+  padding-block:10px 12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;flex-wrap:wrap;align-items:center;gap:10px 28px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.brand svg{flex:none}
+.brand h1{margin:0;font-size:20px;font-weight:900;letter-spacing:.06em;line-height:1.15;text-wrap:balance}
+.brand p{margin:2px 0 0;font-size:12px;color:var(--muted)}
+.clock{display:flex;align-items:center;gap:14px;margin-left:auto}
+.clock time{font:600 42px/1 var(--font-display);font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.clock .when{display:grid;gap:2px;font-size:12.5px;color:var(--muted)}
+.clock .when b{color:var(--ink);font-weight:500}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:2px 9px;border-radius:999px;border:1px solid var(--rule);width:max-content}
+.pill i{width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.pill.live i{background:var(--live);box-shadow:0 0 0 3px color-mix(in srgb,var(--live) 25%,transparent);animation:blink 1.6s infinite}
+.pill.sim i{background:var(--accent)}
+@keyframes blink{50%{opacity:.35}}
+
+.toolbar{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px}
+.days{display:inline-flex;border:1px solid var(--rule);border-radius:10px;overflow:hidden;background:var(--surface)}
+.days button{border:0;background:transparent;padding:4px 0 3px;width:52px;display:grid;justify-items:center;gap:0;position:relative}
+.days button+button{border-left:1px solid var(--rule)}
+.days button b{font-size:12.5px;font-weight:700;line-height:1.3}
+.days button span{font:600 12.5px/1.15 var(--font-display);color:var(--muted);font-variant-numeric:tabular-nums}
+.days button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.days button[aria-pressed="true"] span{color:var(--accent-ink);opacity:.85}
+.days button em{font-style:normal}
+.field{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted)}
+.field input[type=date],.field select{border:1px solid var(--rule);border-radius:8px;background:var(--surface);padding:5px 8px;color:var(--ink)}
+.play{display:flex;align-items:center;gap:8px;flex:1 1 360px;min-width:0}
+.btn{border:1px solid var(--rule);background:var(--surface);border-radius:8px;padding:5px 11px;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{background:var(--surface-2)}
+.btn[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.btn.icon{width:34px;justify-content:center;padding:5px 0}
+.play input[type=range]{flex:1;min-width:110px;accent-color:var(--accent)}
+.play output{font:600 16px var(--font-display);font-variant-numeric:tabular-nums;min-width:44px;color:var(--muted)}
+
+/* ── main grid ──────────────────────────── */
+main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(360px,450px);gap:16px;
+  padding-block:16px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.mapwrap{position:relative;min-height:0;border-radius:14px;overflow:hidden;background:var(--sea);border:1px solid var(--rule)}
+#map{display:block;width:100%;height:100%;touch-action:none;user-select:none;cursor:grab}
+#map.dragging{cursor:grabbing}
+.rail{min-height:0;min-width:0;overflow:auto;display:flex;flex-direction:column;gap:14px;padding-bottom:4px}
+
+/* map svg */
+.land path{fill:var(--land);stroke:var(--county);stroke-width:.8;vector-effect:non-scaling-stroke}
+.tropic{stroke:var(--coast);stroke-width:1;stroke-dasharray:5 6;vector-effect:non-scaling-stroke;fill:none;opacity:.8}
+.sea-label{fill:var(--coast);font-size:13px;letter-spacing:.5em;font-weight:500}
+.sea-label.small{font-size:10.5px;letter-spacing:.08em}
+.line-label{fill:var(--muted);font-size:11px;font-weight:700;letter-spacing:.18em;paint-order:stroke;stroke:var(--land);stroke-width:3px;stroke-linejoin:round}
+.branch path{fill:none;stroke:var(--branch);stroke-width:1.5;stroke-dasharray:3 2.5;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.loopc path{fill:none;stroke:var(--track);stroke-width:5;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.loopi path{fill:none;stroke:var(--track-casing);stroke-width:2;stroke-dasharray:6 6;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+#selRoute{fill:none;stroke-width:9;stroke-linecap:round;stroke-linejoin:round;opacity:.32;vector-effect:non-scaling-stroke}
+#selRoute.cw{stroke:var(--cw)} #selRoute.ccw{stroke:var(--ccw)}
+.st{cursor:pointer}
+.st .hit{fill:transparent}
+.st .dot{fill:var(--surface);stroke:var(--track);stroke-width:1.8}
+.st.t1 .dot{stroke-width:2.4}
+.st.t4 .dot{fill:var(--track);stroke:none}
+.st.sel .dot{fill:var(--accent);stroke:var(--accent)}
+.st.on .dot{stroke:var(--sel-c,var(--accent));stroke-width:2.6}
+.st .lab{display:none}
+.st .zh{font-size:12.5px;font-weight:700;fill:var(--ink);paint-order:stroke;stroke:var(--land);stroke-width:3.5px;stroke-linejoin:round}
+.st.t1 .zh{font-size:14px;font-weight:900}
+.st.t4 .zh{font-size:11px;font-weight:500;fill:var(--muted)}
+.st .en{display:none;font-size:9px;font-family:var(--font-display);font-weight:600;letter-spacing:.06em;fill:var(--muted);paint-order:stroke;stroke:var(--land);stroke-width:3px;stroke-linejoin:round;text-transform:uppercase}
+.st:hover .zh{fill:var(--accent)}
+#map .st.t4{display:none}
+#map.z3 .st.t4{display:inline}
+#map .st.t1 .lab,#map.z2 .st.t2 .lab,#map.z3 .st.t3 .lab,#map.z4 .st.t4 .lab{display:inline}
+#map .st.t1 .en,#map.z3 .st.t2 .en,#map.z4 .st.t3 .en{display:inline}
+.trn{cursor:pointer}
+.trn .hit{fill:transparent}
+.trn .body{fill:var(--train-white);stroke-width:1.6}
+.trn .band{fill:none;stroke:var(--train-black);stroke-width:1.7;stroke-linecap:round}
+.trn .mask{fill:var(--train-black)}
+.trn.cw .body{stroke:var(--cw)} .trn.ccw .body{stroke:var(--ccw)}
+.trn .ring{fill:none;stroke-width:2;opacity:0}
+.trn.cw .ring{stroke:var(--cw)} .trn.ccw .ring{stroke:var(--ccw)}
+.trn.sel .ring{opacity:1;animation:pulse 1.8s ease-out infinite}
+.trn.dwell .body{stroke-dasharray:3 2}
+@keyframes pulse{0%{opacity:.9;transform:scale(.8)}100%{opacity:0;transform:scale(1.9)}}
+.tlabel{font:700 12.5px var(--font-display);letter-spacing:.03em;paint-order:stroke;stroke:var(--land);stroke-width:3.5px;stroke-linejoin:round;pointer-events:none}
+.tlabel.cw{fill:var(--cw)} .tlabel.ccw{fill:var(--ccw)}
+
+/* map overlays */
+.ov{position:absolute;background:color-mix(in srgb,var(--surface) 90%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid var(--rule);border-radius:10px}
+.legend{left:12px;top:12px;padding:9px 12px;display:grid;gap:5px;font-size:12.5px}
+.legend .row{display:flex;align-items:center;gap:8px}
+.legend .sw{width:22px;height:8px;border-radius:3px 6px 6px 3px;background:var(--train-white);border:1.6px solid}
+.legend .sw.cw{border-color:var(--cw)} .legend .sw.ccw{border-color:var(--ccw)}
+.legend b{font:700 16px var(--font-display);min-width:18px;text-align:right;font-variant-numeric:tabular-nums}
+.legend small{color:var(--muted);font-size:11px}
+.legend .trk{display:inline-block;width:22px;height:5px;background:repeating-linear-gradient(90deg,var(--track) 0 5px,var(--track-casing) 5px 10px);border:1.5px solid var(--track);border-radius:2px}
+.mapctl{position:absolute;left:12px;bottom:12px;display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.mapctl .ov{position:static}
+.regions{display:flex;padding:3px;gap:2px;flex-wrap:wrap}
+.regions button{border:0;background:transparent;border-radius:7px;padding:4px 9px;font-size:12.5px;font-weight:500}
+.regions button:hover{background:var(--surface-2)}
+.regions button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.zoom{right:12px;bottom:12px;display:grid;padding:3px;gap:2px}
+.zoom button{border:0;background:transparent;width:32px;height:32px;border-radius:7px;font-size:18px;line-height:1}
+.zoom button:hover{background:var(--surface-2)}
+.scalebar{padding:6px 10px 5px;font:600 12px var(--font-display);color:var(--muted)}
+.scalebar i{display:block;height:6px;border:1.5px solid var(--ink);border-top:0;margin-bottom:2px}
+.offhours{left:50%;top:50%;transform:translate(-50%,-50%);padding:14px 18px;text-align:center;max-width:280px;font-size:13px}
+.offhours b{display:block;font-size:15px;margin-bottom:4px}
+
+/* ── cards ─────────────────────────────── */
+.card{background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:14px 16px}
+.card h2{margin:0;font-size:16px;font-weight:700;letter-spacing:.02em}
+.card-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:10px}
+.card-head small{color:var(--muted);font-size:12px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:8px}
+.kpi{display:grid;gap:0}
+.kpi b{font:600 30px/1.05 var(--font-display);font-variant-numeric:tabular-nums}
+.kpi span{font-size:12px;color:var(--muted)}
+.kpi.cw b{color:var(--cw)} .kpi.ccw b{color:var(--ccw)}
+.chart-cap{font-size:12px;font-weight:500;margin:4px 0 0}
+.chart-cap small{color:var(--muted);font-weight:400;margin-left:4px;font-size:11.5px}
+.chart{display:block;width:100%;height:auto}
+.chart .area{fill:var(--accent);opacity:.16}
+.chart .ln{fill:none;stroke:var(--accent);stroke-width:1.6;stroke-linejoin:round}
+.chart .grid{stroke:var(--rule);stroke-width:1}
+.chart text{fill:var(--muted);font:600 10px var(--font-display);font-variant-numeric:tabular-nums}
+.chart .nowl{stroke:var(--ink);stroke-width:1;stroke-dasharray:2 2}
+.chart .nowd{fill:var(--ink)}
+.chart .nowt{fill:var(--ink);font-size:11px;font-weight:700}
+.cats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:10px}
+.cats button{border:1px solid var(--rule);background:var(--surface);border-radius:9px;padding:6px 8px;display:grid;justify-items:start;text-align:left;gap:0}
+.cats button:hover{background:var(--surface-2)}
+.cats b{font:600 20px/1.1 var(--font-display);font-variant-numeric:tabular-nums}
+.cats span{font-size:11.5px;color:var(--muted);white-space:nowrap}
+.note{margin:10px 0 0;font-size:12.5px;color:var(--muted);line-height:1.6}
+.note b{color:var(--ink);font-weight:500}
+.note.warn{color:var(--ccw)}
+
+/* train number badge */
+.tno{display:inline-flex;align-items:center;justify-content:center;min-width:46px;padding:1px 7px;border-radius:6px;font:700 16px/1.3 var(--font-display);letter-spacing:.03em;font-variant-numeric:tabular-nums;color:var(--tno-ink)}
+.tno.cw{background:var(--cw)} .tno.ccw{background:var(--ccw)}
+
+/* detail */
+.detail-head{display:flex;align-items:flex-start;gap:12px}
+.detail-head .tno{font-size:21px;min-width:62px;padding:3px 8px}
+.detail-head h3{margin:0;font-size:17px;font-weight:700}
+.detail-head p{margin:1px 0 0;font-size:12.5px;color:var(--muted)}
+.detail-head .grow{flex:1;min-width:0}
+.detail-actions{display:flex;gap:6px}
+.train-art{display:block;width:100%;height:auto;margin:10px 0 2px}
+.status{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;padding:9px 12px;background:var(--surface-2);border-radius:10px;font-size:13px}
+.status b{font-weight:700}
+.status .spd{margin-left:auto;font:600 21px var(--font-display);font-variant-numeric:tabular-nums}
+.status .spd small{font-size:12px;color:var(--muted);font-family:var(--font-body);font-weight:400;margin-left:2px}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin:10px 0 0}
+.chips em{font-style:normal;font-size:11.5px;font-weight:500;line-height:1;padding:4px 7px;border-radius:5px;background:var(--surface-2);color:var(--muted);white-space:nowrap}
+.chips em.gold{background:color-mix(in srgb,var(--train-gold) 18%,transparent);color:var(--ink)}
+.cal{display:flex;align-items:flex-start;gap:12px;margin:12px 0 2px;font-size:12px;color:var(--muted)}
+.cal-grid{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,9px);gap:2px}
+.cal-grid i{width:9px;height:9px;border-radius:2px;background:var(--surface-2)}
+.cal-grid i.on{background:var(--ink)}
+.cal-grid i.pad{background:transparent}
+.cal-grid i.cur{outline:2px solid var(--accent);outline-offset:1px}
+.cal p{margin:0;line-height:1.55}
+.cal p b{color:var(--ink);font-weight:500}
+.stops{list-style:none;margin:12px 0 0;padding:0;display:grid}
+.stops li{display:grid;grid-template-columns:50px 18px minmax(0,1fr) auto;align-items:center;gap:8px;min-height:28px;font-size:13.5px}
+.stops .t{font:600 16px var(--font-display);font-variant-numeric:tabular-nums;text-align:right}
+.stops .pin{position:relative;height:100%;display:grid;place-items:center}
+.stops .pin::before{content:"";position:absolute;top:0;bottom:0;width:2px;background:var(--rule)}
+.stops li:first-child .pin::before{top:50%} .stops li:last-child .pin::before{bottom:50%}
+.stops .pin i{position:relative;width:10px;height:10px;border-radius:50%;background:var(--surface);border:2px solid var(--muted)}
+.stops li.pass{min-height:18px;font-size:11.5px;color:var(--muted)}
+.stops li.pass .pin i{width:4px;height:4px;border:0;background:var(--rule)}
+.stops li.done{color:var(--muted)}
+.stops li.done .pin i{background:var(--muted);border-color:var(--muted)}
+.stops li.done .pin::before{background:var(--muted)}
+.stops li.now .pin i{background:var(--accent);border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+.stops li.now{font-weight:700}
+.stops .nm{display:flex;align-items:center;gap:6px;min-width:0}
+.stops .chip{font-style:normal;font-size:11px;font-weight:500;line-height:1;padding:3px 6px;border-radius:5px;background:var(--surface-2);color:var(--muted);white-space:nowrap}
+.stops .chip.nx{background:var(--accent-soft);color:var(--accent);font-weight:700}
+.stops .stt{font-size:12px;color:var(--ink);white-space:nowrap}
+.stops li.done .stt{color:var(--muted)}
+.stops li.now .stt,.stops li.next .stt{color:var(--accent);font-weight:700}
+.stops li.next .pin i{border-color:var(--accent)}
+.stops small.ar{font:500 12px var(--font-display);color:var(--muted);margin-left:2px}
+.fleet{margin:12px 0 0;font-size:12px;color:var(--muted);line-height:1.65;border-top:1px solid var(--rule);padding-top:10px}
+.fleet b{color:var(--ink);font-weight:500}
+
+/* tabs */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--rule);margin:-4px -4px 12px;overflow-x:auto}
+.tabs button{border:0;background:transparent;padding:7px 11px 9px;font-size:14px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:700}
+.tabs button span{font:600 14px var(--font-display);margin-left:4px;color:var(--muted)}
+
+/* running list */
+.runlist{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.runrow{width:100%;border:0;background:transparent;border-radius:9px;padding:7px 8px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-rows:auto auto;column-gap:10px;row-gap:5px;text-align:left;align-items:center}
+.runrow:hover,.runrow.sel{background:var(--surface-2)}
+.runrow .rm{min-width:0;display:grid}
+.runrow .rm b{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.runrow .rm small{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.runrow .rn{text-align:right;display:grid;font-size:12px;color:var(--muted)}
+.runrow .rn b{font:600 16px var(--font-display);color:var(--ink);font-variant-numeric:tabular-nums}
+.runrow .pg{grid-column:1/-1;height:3px;border-radius:2px;background:var(--rule);overflow:hidden}
+.runrow .pg i{display:block;height:100%;width:0}
+.runrow.cw .pg i{background:var(--cw)} .runrow.ccw .pg i{background:var(--ccw)}
+.empty{padding:18px 6px;text-align:center;color:var(--muted);font-size:13px;display:grid;gap:10px;justify-items:center}
+.subhead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:2px 4px 6px;font-size:12px;color:var(--muted)}
+.subhead b{color:var(--ink)}
+
+/* station board — the dark LED board on TRA platforms */
+.pick{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.pick select{border:1px solid var(--rule);border-radius:8px;background:var(--surface);padding:5px 8px;max-width:100%}
+.pick label{font-size:12.5px;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+.board{background:var(--board-bg);color:var(--board-ink);border-radius:12px;padding:12px 14px 10px;color-scheme:dark}
+.board-head{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--board-rule);padding-bottom:8px;margin-bottom:6px}
+.board-head b{font-size:19px;letter-spacing:.1em}
+.board-head span{font:600 12px var(--font-display);letter-spacing:.14em;color:var(--board-dim);margin-left:8px;text-transform:uppercase}
+.board-head time{font:600 24px var(--font-display);color:var(--board-amber);font-variant-numeric:tabular-nums}
+.bdir{margin-top:6px}
+.bdir h4{margin:4px 0 2px;font-size:12px;font-weight:500;color:var(--board-dim);letter-spacing:.06em;display:flex;justify-content:space-between}
+.brow{display:grid;grid-template-columns:48px 46px minmax(0,1fr) auto;gap:8px;align-items:center;padding:4px 0;border-top:1px solid var(--board-rule);font-size:13.5px;cursor:pointer}
+.brow .bt{font:600 19px var(--font-display);color:var(--board-amber);font-variant-numeric:tabular-nums}
+.brow .bn{font:600 17px var(--font-display);font-variant-numeric:tabular-nums}
+.brow .bd{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brow .bd small{color:var(--board-dim);margin-left:6px;font-size:11.5px}
+.brow .bs{font-size:12px;color:var(--board-green);text-align:right;white-space:nowrap}
+.brow .bs.hot{color:var(--board-amber);font-weight:700;animation:blink 1.2s infinite}
+.bnone{padding:8px 0;color:var(--board-dim);font-size:12.5px;border-top:1px solid var(--board-rule)}
+.board-foot{margin-top:8px;font-size:11px;color:var(--board-dim)}
+
+/* origin–destination and timetable lists */
+.od{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:6px;align-items:end;margin-bottom:10px}
+.od label{display:grid;gap:3px;font-size:12px;color:var(--muted)}
+.od select{border:1px solid var(--rule);border-radius:8px;background:var(--surface);padding:6px 8px;font-size:14px;font-weight:700;color:var(--ink);width:100%}
+.ttbar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:10px}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:4px 11px;font-size:13px;font-weight:500}
+.seg button+button{border-left:1px solid var(--rule)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.ttbar select{border:1px solid var(--rule);border-radius:8px;background:var(--surface);padding:4px 8px;font-size:13px}
+.ttbar input[type=search]{border:1px solid var(--rule);border-radius:8px;background:var(--surface);padding:4px 8px;width:92px}
+.ttwrap{overflow:auto;max-height:560px;border:1px solid var(--rule);border-radius:10px}
+.tt{border-collapse:collapse;font-size:13px;white-space:nowrap;min-width:100%}
+.tt th{position:sticky;top:0;background:var(--surface-2);font-size:12px;font-weight:700;padding:6px 7px;text-align:left;z-index:1;border-bottom:1px solid var(--rule)}
+.tt td{padding:4px 7px;border-bottom:1px solid var(--rule);vertical-align:middle}
+.tt td.tm{font:600 16px var(--font-display);font-variant-numeric:tabular-nums}
+.tt td .tno{font-size:14px;min-width:40px}
+.tt td small{color:var(--muted);font-size:11.5px}
+.tt td.via{color:var(--muted);font-size:12px;max-width:116px;overflow:hidden;text-overflow:ellipsis}
+.tt tr{cursor:pointer}
+.tt tr:hover td{background:var(--surface-2)}
+.tt tr.run td{background:var(--accent-soft)}
+.tt tr.run td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+.tt tr.gone td{color:var(--muted)}
+.tt tr.gone .tno{opacity:.55}
+.tt tr.nextup td{background:var(--accent-soft)}
+.tt tr.nextup td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+.tt tr.sel td{outline:1.5px solid var(--accent);outline-offset:-1.5px}
+.ttcount{font-size:12px;color:var(--muted);margin:8px 2px 0}
+
+.foot{font-size:11.5px;color:var(--muted);line-height:1.7;padding:2px 4px 8px}
+.foot a{color:inherit}
+
+@media (max-width:960px){
+  html,body,.app{height:auto}
+  main{grid-template-columns:minmax(0,1fr)}
+  .mapwrap{height:78vh;min-height:460px}
+  .rail{overflow:visible}
+  .top{position:static}
+  .clock{margin-left:0}
+}
+@media (max-width:560px){
+  .clock time{font-size:34px}
+  .days button{width:44px}
+  .days button b{font-size:12px}
+  .days button em,.play output{display:none}
+  .legend small,.legend .row:last-child{display:none}
+  .tabs button{padding:7px 8px 9px}
+  .play{gap:6px}
+  .play input[type=range]{min-width:60px}
+  .play output{min-width:38px}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .cats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .regions button{padding:4px 7px}
+  .legend{font-size:12px}
+}
+@media (prefers-reduced-motion: reduce){
+  .pill.live i,.trn.sel .ring,.brow .bs.hot{animation:none}
+  .trn.sel .ring{opacity:1}
+}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <svg width="50" height="28" viewBox="0 0 50 28" aria-hidden="true">
+        <path d="M49 6H20C13 6 7.5 8 4.5 12L2.5 18.5C2 20.5 3 22 5 22H49Z" fill="var(--train-white)" stroke="var(--ink)" stroke-width="1.4"/>
+        <path d="M5.2 11.5C8 9 12.5 8.2 18 8.2V16.5H3.4Z" fill="var(--train-black)"/>
+        <path d="M18 11H49" stroke="var(--train-black)" stroke-width="4.2"/>
+        <path d="M4 19.3H49" stroke="var(--train-gold)" stroke-width="1.3"/>
+        <circle cx="13" cy="25" r="2" fill="var(--muted)"/><circle cx="39" cy="25" r="2" fill="var(--muted)"/>
+      </svg>
+      <div>
+        <h1>台鐵環島動態系統</h1>
+        <p id="subTitle">EMU3000 新自強號 · 環島鐵路 · 臺鐵每日公告時刻表</p>
+      </div>
+    </div>
+    <div class="clock">
+      <time id="clock" class="num">--:--:--</time>
+      <div class="when">
+        <span id="modePill" class="pill live"><i></i><span>即時</span></span>
+        <b id="whenText">—</b>
+      </div>
+    </div>
+    <div class="toolbar">
+      <div class="days" id="dayBtns" role="group" aria-label="選擇日期"></div>
+      <label class="field" for="datePick">指定日期 <input type="date" id="datePick"></label>
+      <div class="play">
+        <button class="btn" id="liveBtn" aria-pressed="true" title="回到台灣現在時間">● 即時</button>
+        <button class="btn icon" id="playBtn" aria-label="暫停">❚❚</button>
+        <select id="speedSel" class="btn" aria-label="模擬速度">
+          <option value="1">1×</option><option value="10">10×</option><option value="60" selected>60×</option><option value="300">300×</option><option value="900">900×</option>
+        </select>
+        <input type="range" id="slider" min="270" max="1439" step="1" value="480" aria-label="模擬時間">
+        <output id="sliderOut" for="slider">08:00</output>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="mapwrap" aria-label="台灣環島鐵路路線圖">
+      <svg id="map" role="img" aria-label="台灣地圖與 EMU3000 列車位置">
+        <rect id="sea" fill="var(--sea)"/>
+        <g class="land" id="land"></g>
+        <path class="tropic" id="tropic"/>
+        <g class="branch" id="branch"></g>
+        <path id="selRoute"/>
+        <g class="loopc" id="loopc"></g>
+        <g class="loopi" id="loopi"></g>
+        <g id="fixedLabels"></g>
+        <g id="stations"></g>
+        <g id="trains"></g>
+        <g id="trainLabels"></g>
+      </svg>
+      <div class="ov legend" aria-live="polite">
+        <div class="row"><span class="sw cw"></span>順行<b id="lgCW">0</b><small>順時針 · 西部北上、東部南下</small></div>
+        <div class="row"><span class="sw ccw"></span>逆行<b id="lgCCW">0</b><small>逆時針 · 西部南下、東部北上</small></div>
+        <div class="row"><span class="trk"></span><small>環島鐵路 · 虛線為支線 · 列車靠左行駛</small></div>
+      </div>
+      <div class="mapctl">
+        <div class="ov scalebar"><i id="scaleBar" style="width:60px"></i><span id="scaleTxt">50 km</span></div>
+        <div class="ov regions" role="group" aria-label="地圖範圍">
+          <button data-r="all" aria-pressed="true">全島</button>
+          <button data-r="north" aria-pressed="false">北部</button>
+          <button data-r="mid" aria-pressed="false">中部</button>
+          <button data-r="south" aria-pressed="false">南部</button>
+          <button data-r="east" aria-pressed="false">東部</button>
+        </div>
+      </div>
+      <div class="ov zoom">
+        <button id="zIn" aria-label="放大">+</button>
+        <button id="zOut" aria-label="縮小">−</button>
+      </div>
+      <div class="ov offhours" id="offhours" hidden>
+        <b>目前沒有 EMU3000 運行</b>
+        <span id="offText">營運時間約 05:20 至 24:00。</span>
+        <div style="margin-top:10px"><button class="btn" data-jump="480">看 08:00</button></div>
+      </div>
+    </section>
+
+    <aside class="rail">
+      <section class="card" aria-labelledby="sumTitle">
+        <div class="card-head"><h2 id="sumTitle">本日運行概況</h2><small id="sumDate"></small></div>
+        <div class="kpis">
+          <div class="kpi"><b id="kTotal">0</b><span>本日班次</span></div>
+          <div class="kpi cw"><b id="kCW">0</b><span>順行</span></div>
+          <div class="kpi ccw"><b id="kCCW">0</b><span>逆行</span></div>
+          <div class="kpi"><b id="kRun">0</b><span>目前運行</span></div>
+        </div>
+        <div class="chart-cap">全日在線列車數 <small>每 5 分鐘 · 虛線為現在</small></div>
+        <svg class="chart" id="dayChart" viewBox="0 0 330 104" role="img" aria-label="全日在線列車數"></svg>
+        <div class="cats" id="cats"></div>
+        <p class="note" id="sumNote"></p>
+      </section>
+
+      <section class="card" id="detail" hidden aria-live="polite"></section>
+
+      <section class="card">
+        <div class="tabs" role="tablist">
+          <button role="tab" id="tab-run" aria-selected="true" data-tab="run">運行中<span id="tabRunN">0</span></button>
+          <button role="tab" id="tab-board" aria-selected="false" data-tab="board">車站看板</button>
+          <button role="tab" id="tab-od" aria-selected="false" data-tab="od">起訖查詢</button>
+          <button role="tab" id="tab-tt" aria-selected="false" data-tab="tt">時刻表</button>
+        </div>
+        <div id="pane-run"></div>
+        <div id="pane-board" hidden>
+          <div class="pick"><label for="stSel">車站 <select id="stSel"></select></label></div>
+          <div class="board" id="board"></div>
+        </div>
+        <div id="pane-od" hidden>
+          <div class="od">
+            <label for="odA">起站<select id="odA"></select></label>
+            <button class="btn icon" id="odSwap" aria-label="起訖站對調" title="對調">⇄</button>
+            <label for="odB">迄站<select id="odB"></select></label>
+          </div>
+          <div class="ttwrap"><table class="tt" id="odTable"></table></div>
+          <p class="ttcount" id="odCount"></p>
+        </div>
+        <div id="pane-tt" hidden>
+          <div class="ttbar">
+            <div class="seg" id="ttDir"><button data-d="all" aria-pressed="true">全部</button><button data-d="cw" aria-pressed="false">順行</button><button data-d="ccw" aria-pressed="false">逆行</button></div>
+            <select id="ttCat" aria-label="路線"><option value="all">全部路線</option><option value="W">西部幹線</option><option value="E">東部幹線</option><option value="S">經南迴線</option><option value="X">西部↔東部</option></select>
+            <input type="search" id="ttQ" placeholder="車次" inputmode="numeric" aria-label="搜尋車次">
+          </div>
+          <div class="ttwrap"><table class="tt" id="tt"></table></div>
+          <p class="ttcount" id="ttCount"></p>
+        </div>
+      </section>
+
+      <p class="foot">
+        資料來源：臺鐵公司開放資料〈鐵路時刻表 JSON〉（<a href="https://ods.railway.gov.tw/tra-ods-web/ods/download/dataResource/railway_schedule/JSON/list" target="_blank" rel="noopener">ods.railway.gov.tw</a>）與車站基本資料，車種對照<a href="https://www.railway.gov.tw/tra-tip-web/tip" target="_blank" rel="noopener">臺鐵時刻查詢</a>中的「自強(3000)」。列車位置依時刻表推算（車站間以直線相連、加減速為估算），不含誤點等即時資訊。本系統為非官方展示，實際行車以臺鐵公告為準。
+      </p>
+    </aside>
+  </main>
+</div>
+
+<script id="tt-data" type="application/json">__TIMETABLE_JSON__</script>
+<script id="map-data" type="application/json">__MAP_JSON__</script>
+<script>
+(() => {
+'use strict';
+const D = JSON.parse(document.getElementById('tt-data').textContent);
+const MAP = JSON.parse(document.getElementById('map-data').textContent);
+const SVGNS = 'http://www.w3.org/2000/svg';
+const WD = ['日','一','二','三','四','五','六'];   // Date.getUTCDay() order
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ── projection (shared with tools/build_map.py) ─────────────────────────────── */
+const [LON0,LAT0,LATR,K] = MAP.proj;
+const COS = Math.cos(LATR*Math.PI/180);
+const proj = (lat,lon) => [(lon-LON0)*COS*K, (LAT0-lat)*K];
+const KM_PER_UNIT = 0.11119;  // 1/1000° of latitude
+const TRACK_FACTOR = 1.05;    // straight station-to-station lines run a little shorter than the track
+const VMAX = 130;             // EMU3000 top operating speed, km/h
+
+/* ── stations and track graph ─────────────────────────────── */
+const LINES = D.lines;
+const ST = D.stations.map(([code,zh,en,lat,lon],i)=>{ const [x,y]=proj(lat,lon); return {i,code,zh,en,lat,lon,x,y,lines:new Set(),nb:[],stop:false}; });
+const BYCODE = new Map(ST.map(s=>[s.code,s.i]));
+const BYNAME = new Map(ST.map(s=>[s.zh,s.i]));
+const ek = (a,b) => a<b ? a*1000+b : b*1000+a;
+const EDGE = new Map();
+for (const [a,b,l] of D.edges){ EDGE.set(ek(a,b),l); ST[a].lines.add(l); ST[b].lines.add(l); ST[a].nb.push(b); ST[b].nb.push(a); }
+const lineOf = (a,b) => EDGE.get(ek(a,b)) ?? 0;
+const dist = (a,b) => Math.hypot(ST[a].x-ST[b].x, ST[a].y-ST[b].y);
+
+// loop legs in counter-clockwise order from 基隆; each walked along its own line's track
+const LEGS = [['縱貫線','基隆—竹南','0900','1250',1],['山線','竹南—彰化','1250','3360',2],['海線','竹南—彰化','1250','3360',3],
+  ['縱貫線','彰化—高雄','3360','4400',1],['屏東線','高雄—枋寮','4400','5120',4],['南迴線','枋寮—臺東','5120','6000',5],
+  ['臺東線','臺東—花蓮','6000','7000',6],['北迴線','花蓮—蘇澳新','7000','7130',7],['宜蘭線','蘇澳新—八堵','7130','0920',8]];
+function walk(a,b,line){
+  const s=BYCODE.get(a), t=BYCODE.get(b), prev=new Map([[s,-1]]), q=[s];
+  while(q.length){ const u=q.shift(); if(u===t) break; for(const v of ST[u].nb) if(!prev.has(v) && lineOf(u,v)===line){ prev.set(v,u); q.push(v); } }
+  const out=[t]; while(prev.get(out[out.length-1])!==-1) out.push(prev.get(out[out.length-1])); return out.reverse();
+}
+const LEG_STATIONS = LEGS.map(([name,span,a,b,l])=>({name,span,sts:walk(a,b,l)}));
+
+// track drawn as chains between junctions or line changes
+const isEnd = i => ST[i].nb.length!==2 || lineOf(i,ST[i].nb[0])!==lineOf(i,ST[i].nb[1]);
+const CHAINS=[]; { const seen=new Set();
+  for (const s of ST) if (isEnd(s.i)) for (const n of s.nb){
+    if (seen.has(ek(s.i,n))) continue; seen.add(ek(s.i,n));
+    const pts=[s.i]; let prev=s.i, cur=n;
+    for(;;){ pts.push(cur); if (isEnd(cur)) break; const nx=ST[cur].nb.find(x=>x!==prev); if (seen.has(ek(cur,nx))) break; seen.add(ek(cur,nx)); prev=cur; cur=nx; }
+    CHAINS.push({line:lineOf(pts[0],pts[1]),pts});
+  } }
+
+/* ── trains ─────────────────────────────── */
+const PRE=10, POST=3;   // minutes shown at the origin before departure / at the terminus after arrival
+const fmt = m => { m=((Math.floor(m+1e-6)%1440)+1440)%1440; return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); };
+const durTxt = m => { m=Math.round(m); const h=Math.floor(m/60); return h ? `${h} 小時 ${String(m%60).padStart(2,'0')} 分` : `${m} 分`; };
+const CAT = {W:'西部幹線', E:'東部幹線', S:'經南迴線', X:'西部↔東部'};
+const DIRNAME = {cw:'順行', ccw:'逆行'};
+const TRAINS = D.trains.map((r,id)=>{
+  const nodes=r.r.map(x=>x[0]), cum=[0];
+  for (let k=1;k<nodes.length;k++) cum.push(cum[k-1]+dist(nodes[k-1],nodes[k]));
+  const stops=[];
+  r.r.forEach((x,k)=>{ if (x.length>1) stops.push({k,st:x[0],tA:x[1],tD:x[2],arr:x[1],dep:x[2],s:cum[k]}); });
+  const o=stops[0], z=stops[stops.length-1];
+  o.arr=o.tD-PRE; z.dep=z.tA+POST;
+  // km per line, and the lines a passenger would name (縱貫線 is the trunk everyone shares)
+  const km=new Array(LINES.length).fill(0), seq=[]; let westTrunk=0;
+  for (let k=1;k<nodes.length;k++){
+    const l=lineOf(nodes[k-1],nodes[k]), d=dist(nodes[k-1],nodes[k])*KM_PER_UNIT*TRACK_FACTOR;
+    km[l]+=d; if (l===1 && ST[nodes[k]].lat<24.68) westTrunk+=d; if (seq[seq.length-1]!==l) seq.push(l);
+  }
+  const via=[...new Set(seq.filter(l=>l>1 && km[l]>=15))].map(l=>LINES[l]);
+  const W=km[2]+km[3]+km[4]+westTrunk>0, E=km[6]+km[7]+km[8]>0, S=km[5]>0;
+  stops.forEach(s=>ST[s.st].stop=true);
+  return {id,no:r.no,cls:r.c,dir:r.d===1?'cw':'ccw',note:D.notes[r.n],days:r.days,nodes,cum,stops,
+    stopAt:new Map(stops.map((s,j)=>[s.st,Object.assign(s,{j})])),from:o.st,to:z.st,start:o.arr,end:z.dep,first:o.tD,last:z.tA,
+    km:km.reduce((a,b)=>a+b,0),via,cat:S?'S':W&&E?'X':E?'E':'W',nStops:stops.length};
+});
+const NDAYS = TRAINS[0].days.length;
+const DAYTR = Array.from({length:NDAYS},(_,j)=>TRAINS.filter(t=>t.days[j]==='1'));
+const viaTxt = tr => tr.via.length ? '經 '+tr.via.join('・') : CAT[tr.cat];
+
+// trapezoidal speed profile: share `a` of the run accelerating and decelerating
+const prof=(u,a)=>{ const v=1/(1-a); return u<a? v*u*u/(2*a) : u>1-a? 1-v*(1-u)*(1-u)/(2*a) : v*(a/2+(u-a)); };
+const vprof=(u,a)=>{ const v=1/(1-a); return u<a? v*u/a : u>1-a? v*(1-u)/a : v; };
+function trainState(tr,t){
+  if (t<tr.start||t>tr.end) return null;
+  const S=tr.stops;
+  for (let j=0;j<S.length;j++){
+    const s=S[j];
+    if (t<s.arr){ const a=S[j-1], span=s.arr-a.dep; return {mode:'run',from:a,to:s,j,u:span>0?(t-a.dep)/span:1}; }
+    if (t<=s.dep) return {mode:j===0?'wait':j===S.length-1?'arrived':'dwell',at:s,j};
+  }
+  return null;
+}
+function trainPos(tr,st){
+  if (st.mode!=='run') return {s:st.at.s, v:0};
+  const sa=st.from.s, sb=st.to.s, h=(st.to.arr-st.from.dep)/60;
+  const avg=h>0 ? (sb-sa)*KM_PER_UNIT*TRACK_FACTOR/h : 0, a=Math.min(.45,Math.max(.08,1-avg/VMAX));
+  return {s:sa+(sb-sa)*prof(st.u,a), v:avg*vprof(st.u,a)};
+}
+function pointAt(tr,s){
+  const C=tr.cum, N=tr.nodes; s=Math.max(0,Math.min(C[C.length-1],s));
+  let lo=0,hi=C.length-1; while(hi-lo>1){ const m=(lo+hi)>>1; if (C[m]<=s) lo=m; else hi=m; }
+  const A=ST[N[lo]], B=ST[N[hi]], dx=B.x-A.x, dy=B.y-A.y, L=Math.hypot(dx,dy)||1, f=(s-C[lo])/((C[hi]-C[lo])||1);
+  return {x:A.x+dx*f, y:A.y+dy*f, tx:dx/L, ty:dy/L};
+}
+
+/* ── dates ─────────────────────────────── */
+const ds=D.dates[0], D0=Date.UTC(+ds.slice(0,4), +ds.slice(4,6)-1, +ds.slice(6,8));
+const idxOf = (y,mo,d) => Math.round((Date.UTC(y,mo-1,d)-D0)/864e5);
+const dateOf = i => { const t=new Date(D0+i*864e5); return {y:t.getUTCFullYear(),mo:t.getUTCMonth()+1,d:t.getUTCDate(),wd:t.getUTCDay()}; };
+// outside the published range, borrow the nearest published date on the same weekday
+const proxy = i => i<0 ? i+7*Math.ceil(-i/7) : i>=NDAYS ? i-7*Math.ceil((i-NDAYS+1)/7) : i;
+const dayTrains = i => DAYTR[proxy(i)];
+const runsOn = (tr,i) => tr.days[proxy(i)]==='1';
+const md = i => { const d=dateOf(i); return `${d.mo}/${d.d}`; };
+const dateLabel = i => { const d=dateOf(i); return `${d.y}/${d.mo}/${d.d}（${WD[d.wd]}）`; };
+const ISO = i => { const d=dateOf(i); return `${d.y}-${String(d.mo).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`; };
+
+/* ── clock / simulation state ─────────────────────────────── */
+const state={mode:'live', di:0, min:480, speed:60, playing:true, sel:null, st:BYNAME.get('臺北'), tab:'run', region:'all',
+  ttDir:'all', ttCat:'all', ttQ:'', odA:BYNAME.get('臺北'), odB:BYNAME.get('臺東'), todayDi:0, live:null};
+const tpFmt=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
+function taipeiNow(){
+  const now=new Date(), p={}; for (const x of tpFmt.formatToParts(now)) p[x.type]=x.value;
+  const h=+p.hour%24; return {y:+p.year, mo:+p.month, d:+p.day, sec:h*3600+(+p.minute)*60+(+p.second)+now.getMilliseconds()/1000};
+}
+function syncLive(){
+  const n=taipeiNow(), di=idxOf(n.y,n.mo,n.d);
+  state.live=n; state.min=n.sec/60;
+  if (di!==state.todayDi){ state.todayDi=di; renderDayBtns(); }
+  if (di!==state.di){ state.di=di; onDayChange(); }
+}
+function enterSim(play=true){ if (state.mode==='sim') return; state.mode='sim'; state.playing=play; syncControls(); }
+function goLive(){ state.mode='live'; syncLive(); onDayChange(); syncControls(); }
+function setDate(i){ enterSim(); state.di=i; onDayChange(); syncControls(); }
+function jumpTo(min){ enterSim(); state.min=min; syncControls(); }
+
+/* ── map ─────────────────────────────── */
+const svg=$('map');
+const W=MAP.w, H=MAP.h;
+let vb={x:0,y:0,w:W,h:H};
+const sea=$('sea'); sea.setAttribute('x',-W); sea.setAttribute('y',-H); sea.setAttribute('width',W*3); sea.setAttribute('height',H*3);
+$('land').innerHTML=MAP.counties.map(c=>`<path d="${c.d}"><title>${esc(c.name)}</title></path>`).join('');
+const chainD = c => 'M'+c.pts.map(i=>ST[i].x.toFixed(1)+','+ST[i].y.toFixed(1)).join('L');
+$('branch').innerHTML=CHAINS.filter(c=>!c.line).map(c=>`<path d="${chainD(c)}"/>`).join('');
+const loopD=CHAINS.filter(c=>c.line).map(c=>`<path d="${chainD(c)}"/>`).join('');
+$('loopc').innerHTML=loopD; $('loopi').innerHTML=loopD;
+const tropicY=(LAT0-23.4365)*K; $('tropic').setAttribute('d',`M-${W} ${tropicY}H${W*2}`);
+
+const fixed=[]; // elements kept at constant screen size: {el,x,y}
+function svgEl(tag,attrs,html){ const e=document.createElementNS(SVGNS,tag); for (const k in attrs) e.setAttribute(k,attrs[k]); if (html!=null) e.innerHTML=html; return e; }
+function addFixed(el,x,y,parent){ (parent||$('fixedLabels')).appendChild(el); fixed.push({el,x,y}); return el; }
+[['臺灣海峽',24.05,119.78,'sea-label'],['太平洋',23.05,121.9,'sea-label'],['巴士海峽',21.98,120.45,'sea-label'],['北回歸線 23.5°N',23.4365,119.62,'sea-label small'],
+ ['縱貫線',24.85,121.13,'line-label','start'],['山線',24.3,120.92,'line-label','start'],['海線',24.47,120.57,'line-label','end'],['縱貫線',23.62,120.38,'line-label','end'],
+ ['屏東線',22.47,120.49,'line-label','end'],['南迴線',22.235,120.79,'line-label'],['臺東線',23.0,121.1,'line-label','end'],['北迴線',24.25,121.68,'line-label','end'],['宜蘭線',24.88,121.77,'line-label','end']
+].forEach(([txt,lat,lon,cls,anc='middle'])=>{
+  const [x,y]=proj(lat,lon); const g=svgEl('g',{});
+  g.appendChild(svgEl('text',{class:cls,'text-anchor':anc,y:cls.includes('small')?-5:0},txt)); addFixed(g,x,y);
+});
+
+// label tiers: 1 always, 2 from regional zoom, 3 every EMU3000 stop when closer, 4 every station
+const TIER1=['基隆','臺北','新竹','臺中','彰化','嘉義','臺南','高雄','屏東','枋寮','臺東','玉里','花蓮','宜蘭'];
+const TIER2=['七堵','南港','松山','板橋','樹林','桃園','中壢','竹南','苗栗','豐原','沙鹿','大甲','通霄','員林','斗六','新營','新左營','潮州','大武','知本','池上','關山','光復','鳳林','蘇澳新','羅東','礁溪','瑞芳','鹿野','瑞穗'];
+const LBL={ '基隆':[10,-8,'start'],'臺北':[0,-13,'middle'],'七堵':[2,17,'middle'],'南港':[6,-11,'start'],'松山':[0,19,'middle'],'板橋':[0,19,'middle'],
+  '樹林':[-10,14,'end'],'桃園':[0,-12,'middle'],'中壢':[-6,17,'end'],'瑞芳':[0,-12,'middle'],'枋寮':[-12,4,'end'],'宜蘭':[12,4,'start'] };
+function labelPos(s){
+  if (LBL[s.zh]) return LBL[s.zh];
+  const L=s.lines, right=!L.has(1) && (L.has(2)||L.has(4)||L.has(6)||L.has(7)||L.has(8)||(L.has(5)&&s.lon>120.8));
+  return right ? [11,4,'start'] : [-11,4,'end'];
+}
+const stEls=ST.map(s=>{
+  const tier=TIER1.includes(s.zh)?1:TIER2.includes(s.zh)?2:s.stop?3:4;
+  const [lx,ly,anc]=labelPos(s), r=tier===1?4.6:tier===4?1.8:3.2;
+  const g=svgEl('g',{class:`st t${tier}`,'data-st':s.i,role:'button','aria-label':s.zh+'站'});
+  g.innerHTML=`<circle class="hit" r="11"/><circle class="dot" r="${r}"/><g class="lab"><text class="zh" x="${lx}" y="${ly}" text-anchor="${anc}">${esc(s.zh)}</text><text class="en" x="${lx}" y="${ly+11}" text-anchor="${anc}">${esc(s.en)}</text></g>`;
+  addFixed(g,s.x,s.y,$('stations')); return g;
+});
+
+let pxPerUnit=1, mapRect={width:1,height:1};
+function measure(){ mapRect=svg.getBoundingClientRect(); applyVB(); }
+function applyVB(){
+  svg.setAttribute('viewBox',`${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
+  pxPerUnit=Math.min(mapRect.width/vb.w, mapRect.height/vb.h)||1;
+  const k=1/pxPerUnit;
+  for (const f of fixed) f.el.setAttribute('transform',`translate(${f.x} ${f.y}) scale(${k})`);
+  svg.classList.toggle('z2',pxPerUnit>=0.36); svg.classList.toggle('z3',pxPerUnit>=0.8); svg.classList.toggle('z4',pxPerUnit>=1.7);
+  const pxPerKm=pxPerUnit/KM_PER_UNIT; const km=[2,5,10,20,50,100,200].find(v=>v*pxPerKm>=55)||200;
+  $('scaleBar').style.width=(km*pxPerKm).toFixed(0)+'px'; $('scaleTxt').textContent=km+' km';
+}
+new ResizeObserver(measure).observe(svg);
+
+function fitBox(b){ // expand bbox to the container aspect
+  const ar=mapRect.width/mapRect.height||0.7; let {x,y,w,h}=b;
+  if (w/h<ar){ const nw=h*ar; x-=(nw-w)/2; w=nw; } else { const nh=w/ar; y-=(nh-h)/2; h=nh; }
+  return {x,y,w,h};
+}
+const geoBox=(lat0,lat1,lon0,lon1)=>{ const [x0,y1]=proj(lat0,lon0), [x1,y0]=proj(lat1,lon1); return {x:x0,y:y0,w:x1-x0,h:y1-y0}; };
+const REGIONS={ all:()=>geoBox(21.88,25.32,119.95,122.05), north:()=>geoBox(24.55,25.22,120.8,121.98), mid:()=>geoBox(23.4,24.75,120.15,120.98),
+  south:()=>geoBox(22.25,23.5,120.05,121.0), east:()=>geoBox(22.6,24.82,120.95,121.98) };
+const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+let fly=null;
+function flyTo(target){
+  target=fitBox(target);
+  if (reduced){ vb=target; applyVB(); return; }
+  fly={from:{...vb},to:target,t0:performance.now(),dur:520};
+}
+function stepFly(now){
+  if (!fly) return; let u=Math.min(1,(now-fly.t0)/fly.dur); u=u<.5?4*u*u*u:1-Math.pow(-2*u+2,3)/2;
+  for (const k of ['x','y','w','h']) vb[k]=fly.from[k]+(fly.to[k]-fly.from[k])*u;
+  applyVB(); if (u>=1) fly=null;
+}
+function setRegion(r){ state.region=r; document.querySelectorAll('.regions button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.r===r)); flyTo(REGIONS[r]()); }
+function clientToSvg(cx,cy){ const r=mapRect, s=pxPerUnit, ox=(r.width-vb.w*s)/2, oy=(r.height-vb.h*s)/2; return [vb.x+(cx-r.left-ox)/s, vb.y+(cy-r.top-oy)/s]; }
+function zoomAt(factor,cx,cy){
+  const nw=Math.min(W*1.4,Math.max(W/70,vb.w/factor)); factor=vb.w/nw;
+  const [px,py]=clientToSvg(cx,cy);
+  vb={x:px-(px-vb.x)/factor, y:py-(py-vb.y)/factor, w:vb.w/factor, h:vb.h/factor};
+  fly=null; clearRegion(); applyVB();
+}
+function clearRegion(){ document.querySelectorAll('.regions button').forEach(b=>b.setAttribute('aria-pressed','false')); }
+svg.addEventListener('wheel',e=>{ e.preventDefault(); zoomAt(Math.exp(-e.deltaY*0.0016),e.clientX,e.clientY); },{passive:false});
+const ptrs=new Map(); let drag=null;
+svg.addEventListener('pointerdown',e=>{
+  svg.setPointerCapture(e.pointerId); ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  drag={x:e.clientX,y:e.clientY,moved:false,pinch:null};
+  if (ptrs.size===2){ const [a,b]=[...ptrs.values()]; drag.pinch={d:Math.hypot(a.x-b.x,a.y-b.y)}; drag.moved=true; }
+});
+svg.addEventListener('pointermove',e=>{
+  if (!drag||!ptrs.has(e.pointerId)) return;
+  const prev=ptrs.get(e.pointerId); ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if (ptrs.size===2 && drag.pinch){ const [a,b]=[...ptrs.values()]; const d=Math.hypot(a.x-b.x,a.y-b.y); zoomAt(d/drag.pinch.d,(a.x+b.x)/2,(a.y+b.y)/2); drag.pinch.d=d; return; }
+  const dx=e.clientX-drag.x, dy=e.clientY-drag.y;
+  if (!drag.moved && Math.hypot(dx,dy)>5){ drag.moved=true; svg.classList.add('dragging'); fly=null; clearRegion(); }
+  if (drag.moved){ vb.x-=(e.clientX-prev.x)/pxPerUnit; vb.y-=(e.clientY-prev.y)/pxPerUnit; applyVB(); }
+});
+function endPtr(e){
+  if (!ptrs.has(e.pointerId)) return; ptrs.delete(e.pointerId);
+  if (drag && !drag.moved && e.type==='pointerup'){
+    const hit=document.elementFromPoint(e.clientX,e.clientY);
+    const t=hit&&hit.closest('[data-tid]'), s=hit&&hit.closest('[data-st]');
+    if (t) selectTrain(+t.dataset.tid); else if (s) selectStation(+s.dataset.st,true);
+  }
+  if (!ptrs.size){ drag=null; svg.classList.remove('dragging'); }
+}
+svg.addEventListener('pointerup',endPtr); svg.addEventListener('pointercancel',endPtr);
+$('zIn').onclick=()=>{ const r=mapRect; zoomAt(1.6,r.left+r.width/2,r.top+r.height/2); };
+$('zOut').onclick=()=>{ const r=mapRect; zoomAt(1/1.6,r.left+r.width/2,r.top+r.height/2); };
+document.querySelectorAll('.regions button').forEach(b=>b.onclick=()=>setRegion(b.dataset.r));
+
+/* trains on the map */
+const trainEls=new Map(); let ACTIVE=[];
+const BODY='M-14,-4H8.5C11.5,-4 13.6,-2.8 15,-1.1V1.1C13.6,2.8 11.5,4 8.5,4H-14Q-15.5,4 -15.5,2.5V-2.5Q-15.5,-4 -14,-4Z';
+function makeTrainEl(tr){
+  const g=svgEl('g',{class:'trn '+tr.dir,'data-tid':tr.id,role:'button','aria-label':`${DIRNAME[tr.dir]} ${tr.no} 次`});
+  g.innerHTML=`<circle class="ring" r="11"/><circle class="hit" r="15"/><path class="body" d="${BODY}"/><path class="band" d="M-13,-1.2H8"/><path class="mask" d="M9,-3.3C11.6,-3.1 13.3,-2 14.2,-0.9V0.9C13.3,2 11.6,3.1 9,3.3Z"/>`;
+  const lab=svgEl('text',{class:'tlabel '+tr.dir},tr.no);
+  $('trains').appendChild(g); $('trainLabels').appendChild(lab);
+  return {g,lab};
+}
+// trains of the date, plus last night's trains still running after midnight
+function computeActive(){
+  const t=state.min, list=[];
+  const add=(tr,tt)=>{ if (tt<tr.start||tt>tr.end) return; const st=trainState(tr,tt); if (st) list.push({tr,t:tt,st,pos:trainPos(tr,st)}); };
+  for (const tr of dayTrains(state.di)) add(tr,t);
+  for (const tr of dayTrains(state.di-1)) add(tr,t+1440);
+  return list;
+}
+function drawTrains(){
+  ACTIVE=computeActive();
+  const k=1/pxPerUnit, size=pxPerUnit<0.2?0.56:pxPerUnit<0.36?0.68:pxPerUnit<0.8?0.85:1.05, showLabels=pxPerUnit>0.55, seen=new Set();
+  for (const a of ACTIVE){
+    const {tr,st,pos}=a; let el=trainEls.get(tr.id); if (!el){ el=makeTrainEl(tr); trainEls.set(tr.id,el); }
+    seen.add(tr.id);
+    const p=pointAt(tr,pos.s), hx=p.tx, hy=p.ty;          // heading along the train's own route
+    const off=(3+4.5*size)*k, x=p.x+hy*off, y=p.y-hx*off; // TRA runs on the left
+    const ang=Math.atan2(hy,hx)*180/Math.PI, sel=state.sel===tr.id;
+    el.g.setAttribute('transform',`translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${ang.toFixed(1)}) scale(${(k*size*(sel?1.35:1)).toFixed(4)})`);
+    el.g.classList.toggle('sel',sel); el.g.classList.toggle('dwell',st.mode!=='run');
+    const lx=p.x+hy*off*3.3, ly=p.y-hx*off*3.3;
+    el.lab.setAttribute('transform',`translate(${lx.toFixed(1)} ${(ly+4*k).toFixed(1)}) scale(${k.toFixed(4)})`);
+    el.lab.setAttribute('text-anchor', Math.abs(hy)<.35?'middle':(hy>0?'start':'end'));
+    el.lab.style.display=(showLabels||sel)?'':'none';
+  }
+  for (const [id,el] of trainEls) if (!seen.has(id)){ el.g.remove(); el.lab.remove(); trainEls.delete(id); }
+  if (state.sel!=null && trainEls.has(state.sel)){ const el=trainEls.get(state.sel); if (el.g.nextSibling) $('trains').appendChild(el.g); }
+}
+function drawSelRoute(){
+  const r=$('selRoute'), tr=state.sel!=null?TRAINS[state.sel]:null;
+  stEls.forEach(g=>g.classList.remove('on'));
+  if (!tr){ r.setAttribute('d',''); return; }
+  r.setAttribute('class',tr.dir); r.setAttribute('d','M'+tr.nodes.map(i=>ST[i].x.toFixed(1)+','+ST[i].y.toFixed(1)).join('L'));
+  svg.style.setProperty('--sel-c',`var(--${tr.dir})`);
+  tr.stops.forEach(s=>stEls[s.st].classList.add('on'));
+}
+
+/* ── header controls ─────────────────────────────── */
+function renderDayBtns(){
+  const t=state.todayDi;
+  $('dayBtns').innerHTML=Array.from({length:7},(_,k)=>{ const i=t+k, d=dateOf(i);
+    return `<button data-di="${i}" aria-pressed="false" aria-label="${k===0?'今天 ':k===1?'明天 ':''}${dateLabel(i)}，${dayTrains(i).length} 班"><b>${k===0?'今天':k===1?'明天':'週'+WD[d.wd]}</b><span>${d.mo}/${d.d}<em> · ${dayTrains(i).length}</em></span></button>`; }).join('');
+  $('dayBtns').querySelectorAll('button').forEach(b=>b.onclick=()=>setDate(+b.dataset.di));
+}
+$('datePick').min=ISO(0); $('datePick').max=ISO(NDAYS-1);
+$('datePick').onchange=e=>{ const v=e.target.value; if (!v) return; const [y,m,d]=v.split('-').map(Number); setDate(idxOf(y,m,d)); };
+$('liveBtn').onclick=goLive;
+$('playBtn').onclick=()=>{ if (state.mode==='live') enterSim(false); else state.playing=!state.playing; syncControls(); };
+$('speedSel').onchange=e=>{ state.speed=+e.target.value; if (state.mode==='live') enterSim(true); else state.playing=true; syncControls(); };
+$('slider').oninput=e=>{ enterSim(state.mode==='sim'?state.playing:false); state.min=+e.target.value; };
+document.addEventListener('click',e=>{ const j=e.target.closest('[data-jump]'); if (j) jumpTo(+j.dataset.jump); });
+function syncControls(){
+  const live=state.mode==='live';
+  $('liveBtn').setAttribute('aria-pressed',live);
+  const playing=live||state.playing;
+  $('playBtn').textContent=playing?'❚❚':'▶'; $('playBtn').setAttribute('aria-label',playing?'暫停':'播放');
+  const pill=$('modePill'); pill.className='pill '+(live?'live':'sim'); pill.lastElementChild.textContent=live?'即時':(state.playing?`模擬 ${state.speed}×`:'模擬 · 暫停');
+  $('dayBtns').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.di===state.di));
+  const iso=ISO(state.di); if ($('datePick').value!==iso) $('datePick').value=iso;
+}
+function drawClock(){
+  let secs=state.mode==='live'?state.live.sec:state.min*60;
+  secs=((secs%86400)+86400)%86400;
+  const txt=[Math.floor(secs/3600),Math.floor(secs/60)%60,Math.floor(secs)%60].map(v=>String(v).padStart(2,'0')).join(':');
+  if ($('clock').textContent!==txt) $('clock').textContent=txt;
+  const when=dateLabel(state.di)+(proxy(state.di)!==state.di?` · 套用 ${md(proxy(state.di))} 班表`:'');
+  if ($('whenText').textContent!==when) $('whenText').textContent=when;
+  const sl=$('slider'); if (document.activeElement!==sl || state.mode==='live') sl.value=Math.max(270,Math.min(1439,state.min));
+  const o=fmt(state.min); if ($('sliderOut').textContent!==o) $('sliderOut').textContent=o;
+}
+
+/* ── summary card ─────────────────────────────── */
+const CH={x0:24,x1:322,y0:84,y1:12,m0:270,m1:1470};
+const chX=m=>CH.x0+(m-CH.m0)/(CH.m1-CH.m0)*(CH.x1-CH.x0);
+let curve=[], curveMax=1;
+function renderSummary(){
+  const i=state.di, list=dayTrains(i), prev=dayTrains(i-1);
+  const nCW=list.filter(t=>t.dir==='cw').length;
+  $('sumTitle').textContent=i===state.todayDi?'本日運行概況':`${md(i)} 運行概況`;
+  $('sumDate').textContent=dateLabel(i);
+  $('kTotal').textContent=list.length; $('kCW').textContent=nCW; $('kCCW').textContent=list.length-nCW;
+  curve=[]; for (let m=CH.m0;m<=CH.m1;m+=5){ let c=0; for (const t of list) if (m>=t.first&&m<=t.last) c++; for (const t of prev) if (m+1440>=t.first&&m+1440<=t.last) c++; curve.push([m,c]); }
+  curveMax=Math.max(4,...curve.map(p=>p[1]));
+  const top=Math.ceil(curveMax/5)*5, chY=c=>CH.y0-(c/top)*(CH.y0-CH.y1);
+  const line=curve.map(([m,c],k)=>`${k?'L':'M'}${chX(m).toFixed(1)},${chY(c).toFixed(1)}`).join('');
+  const ticks=[360,540,720,900,1080,1260,1440].map(m=>`<line class="grid" x1="${chX(m)}" x2="${chX(m)}" y1="${CH.y0}" y2="${CH.y0+3}"/><text x="${chX(m)}" y="${CH.y0+14}" text-anchor="middle">${String(m/60).padStart(2,'0')}</text>`).join('');
+  const grid=[top/2,top].map(v=>`<line class="grid" x1="${CH.x0}" x2="${CH.x1}" y1="${chY(v)}" y2="${chY(v)}"/><text x="${CH.x0-5}" y="${chY(v)+3.5}" text-anchor="end">${v}</text>`).join('');
+  $('dayChart').innerHTML=`${grid}<line class="grid" x1="${CH.x0}" x2="${CH.x1}" y1="${CH.y0}" y2="${CH.y0}"/>${ticks}
+    <path class="area" d="${line}L${chX(CH.m1)},${CH.y0}L${chX(CH.m0)},${CH.y0}Z"/><path class="ln" d="${line}"/>
+    <line class="nowl" id="chNowL" y1="${CH.y1-4}" y2="${CH.y0}"/><circle class="nowd" id="chNowD" r="3"/><text class="nowt" id="chNowT" y="${CH.y1-5}"></text>`;
+  $('dayChart').dataset.top=top;
+  const cnt=k=>list.filter(t=>t.cat===k).length;
+  $('cats').innerHTML=Object.entries(CAT).map(([k,v])=>`<button data-cat="${k}" title="在時刻表列出${v}班次"><b>${cnt(k)}</b><span>${v}</span></button>`).join('');
+  $('cats').querySelectorAll('button').forEach(b=>b.onclick=()=>{ state.ttCat=b.dataset.cat; $('ttCat').value=state.ttCat; setTab('tt'); });
+  const p=proxy(i), weekday=dateOf(i).wd;
+  const peak=curve.reduce((a,b)=>b[1]>a[1]?b:a);
+  $('sumNote').className='note'+(p!==i?' warn':'');
+  $('sumNote').innerHTML = p!==i
+    ? `${dateLabel(i)}不在臺鐵已公告的時刻表範圍（${md(0)}–${md(NDAYS-1)}），暫以同為週${WD[weekday]}的 ${md(p)} 班表推算。`
+    : `EMU3000 本日行駛 <b>${list.length}</b> 班，最多同時有 <b>${peak[1]}</b> 列在線（約 ${fmt(peak[0])}）。班次依臺鐵每日公告時刻表，共涵蓋 ${md(0)}–${md(NDAYS-1)}。`;
+}
+function updateChartNow(){
+  const top=+$('dayChart').dataset.top||1, m=state.min, inRange=m>=CH.m0&&m<=CH.m1;
+  const L=$('chNowL'), Dt=$('chNowD'), T=$('chNowT'); if (!L) return;
+  [L,Dt,T].forEach(e=>e.style.display=inRange?'':'none'); if (!inRange) return;
+  const x=chX(m), c=ACTIVE.length, y=CH.y0-(c/top)*(CH.y0-CH.y1);
+  L.setAttribute('x1',x); L.setAttribute('x2',x); Dt.setAttribute('cx',x); Dt.setAttribute('cy',y);
+  T.setAttribute('x',x); T.setAttribute('text-anchor',x>250?'end':x<70?'start':'middle'); T.textContent=`${fmt(m)} · ${c} 列`;
+}
+
+/* ── tabs ─────────────────────────────── */
+const TABS=['run','board','od','tt'];
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+function setTab(t){ state.tab=t; document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t)); TABS.forEach(k=>$('pane-'+k).hidden=k!==t); if (t==='tt') renderTimetable(); if (t==='od') renderOD(); renderPanels(); }
+
+/* running list */
+let runKey='';
+function statusText(tr,st){
+  if (!st) return '';
+  if (st.mode==='wait') return `${ST[tr.from].zh} 待發`;
+  if (st.mode==='dwell') return `停靠 ${ST[st.at.st].zh}`;
+  if (st.mode==='arrived') return `已抵達 ${ST[tr.to].zh}`;
+  return `${ST[st.from.st].zh} → ${ST[st.to.st].zh}`;
+}
+function nextStop(tr,st){
+  if (st.mode==='wait') return [ST[tr.from].zh+' 開', st.at.tD];
+  if (st.mode==='dwell') return [ST[st.at.st].zh+' 開', st.at.tD];
+  if (st.mode==='arrived') return ['抵達', st.at.tA];
+  return ['下一站 '+ST[st.to.st].zh, st.to.tA];
+}
+const progress=(tr,t)=>Math.max(0,Math.min(1,(t-tr.first)/(tr.last-tr.first)));
+function renderRunning(){
+  const pane=$('pane-run'), list=[...ACTIVE].sort((a,b)=>a.tr.dir===b.tr.dir? a.tr.first-b.tr.first : a.tr.dir==='cw'?-1:1);
+  const nCW=list.filter(a=>a.tr.dir==='cw').length;
+  const key=state.di+'|'+state.sel+'|'+list.map(a=>a.tr.id+statusText(a.tr,a.st)).join(',');
+  if (key!==runKey){
+    runKey=key;
+    if (!list.length) pane.innerHTML=`<div class="empty">此刻沒有 EMU3000 運行（${md(state.di)} ${fmt(state.min)}）。<button class="btn" data-jump="480">看 08:00</button></div>`;
+    else pane.innerHTML=`<div class="subhead"><span>順行 <b>${nCW}</b> · 逆行 <b>${list.length-nCW}</b></span><span>依起站發車時間排序</span></div><ul class="runlist">`+list.map(({tr,st})=>{
+      const [nl,nt]=nextStop(tr,st);
+      return `<li><button class="runrow ${tr.dir}${state.sel===tr.id?' sel':''}" data-pick="${tr.id}"><span class="tno ${tr.dir}">${tr.no}</span><span class="rm"><b>${ST[tr.from].zh} → ${ST[tr.to].zh}</b><small>${statusText(tr,st)} · ${viaTxt(tr)}</small></span><span class="rn"><small>${nl}</small><b>${fmt(nt)}</b></span><span class="pg"><i data-pg="${tr.id}" data-t="${st.mode==='wait'?0:1}"></i></span></button></li>`;
+    }).join('')+'</ul>';
+  }
+  const tOf=new Map(ACTIVE.map(a=>[a.tr.id,a.t]));
+  pane.querySelectorAll('[data-pg]').forEach(i=>{ const tr=TRAINS[+i.dataset.pg]; i.style.width=(progress(tr,tOf.get(tr.id)??state.min)*100).toFixed(1)+'%'; });
+}
+document.addEventListener('click',e=>{ const p=e.target.closest('[data-pick]'); if (p) selectTrain(+p.dataset.pick); });
+
+/* station pickers: EMU3000 stops grouped by line, in loop order */
+const STOP_GROUPS=[]; { const seen=new Set();
+  for (const g of LEG_STATIONS){ const sts=g.sts.filter(i=>ST[i].stop && !seen.has(i)); sts.forEach(i=>seen.add(i)); if (sts.length) STOP_GROUPS.push({label:`${g.name}（${g.span}）`,sts}); } }
+const stopOptions=STOP_GROUPS.map(g=>`<optgroup label="${g.label}">${g.sts.map(i=>`<option value="${i}">${ST[i].zh}</option>`).join('')}</optgroup>`).join('');
+['stSel','odA','odB'].forEach(id=>$(id).innerHTML=stopOptions);
+
+/* station board */
+function dirHint(i){ const L=ST[i].lines; return L.has(6)||L.has(7)||L.has(8) ? {cw:'南下',ccw:'北上'} : L.has(5) ? {cw:'西行',ccw:'東行'} : {cw:'北上',ccw:'南下'}; }
+let boardKey='';
+function renderBoard(){
+  const i=state.st, t=state.min;
+  if (+$('stSel').value!==i) $('stSel').value=i;
+  const cands=[...dayTrains(state.di).map(tr=>[tr,t]), ...dayTrains(state.di-1).map(tr=>[tr,t+1440])];
+  const deps=dir=>cands.filter(([tr,tt])=>tr.dir===dir && tr.to!==i && tr.stopAt.has(i) && tr.stopAt.get(i).tD>=tt-0.5)
+      .sort((a,b)=>(a[0].stopAt.get(i).tD-a[1])-(b[0].stopAt.get(i).tD-b[1])).slice(0,6);
+  const row=([tr,tt])=>{ const s=tr.stopAt.get(i), dt=s.tD-tt; let note, hot=false;
+    if (tt>=s.arr && tt<=s.dep){ note=tr.from===i?'待發':'停靠中'; hot=true; } else if (dt<=5){ note=`${Math.max(1,Math.ceil(dt))} 分後`; hot=true; } else if (dt<60) note=`${Math.ceil(dt)} 分後`; else note='依時刻';
+    return `<div class="brow" data-pick="${tr.id}"><span class="bt">${fmt(s.tD)}</span><span class="bn">${tr.no}</span><span class="bd">往 ${ST[tr.to].zh}<small>${viaTxt(tr)}</small></span><span class="bs${hot?' hot':''}">${note}</span></div>`; };
+  const hint=dirHint(i);
+  const blk=dir=>{ const l=deps(dir), label=`${DIRNAME[dir]} · ${hint[dir]}`;
+    return `<div class="bdir"><h4><span>${label}</span><span>開車 · 車次 · 終點</span></h4>${l.length?l.map(row).join(''):`<div class="bnone">本日${DIRNAME[dir]}班次已無或不停靠本站</div>`}</div>`; };
+  const html=`<div class="board-head"><div><b>${ST[i].zh}</b><span>${esc(ST[i].en)}</span></div><time>${fmt(t)}</time></div>${blk('cw')}${blk('ccw')}<div class="board-foot">${md(state.di)} EMU3000 班次 · 依時刻表推算，非即時誤點資訊</div>`;
+  if (html!==boardKey){ boardKey=html; $('board').innerHTML=html; }
+}
+$('stSel').onchange=e=>selectStation(+e.target.value,false);
+function selectStation(i,fromMap){
+  state.st=i; stEls.forEach((g,k)=>g.classList.toggle('sel',k===i));
+  if (fromMap){ if (ST[i].stop) setTab('board'); else { boardKey=''; renderBoard(); } } else renderBoard();
+}
+
+/* origin–destination */
+$('odA').onchange=e=>{ state.odA=+e.target.value; renderOD(); };
+$('odB').onchange=e=>{ state.odB=+e.target.value; renderOD(); };
+$('odSwap').onclick=()=>{ [state.odA,state.odB]=[state.odB,state.odA]; renderOD(); };
+let odRows=[];
+function renderOD(){
+  const a=state.odA, b=state.odB; $('odA').value=a; $('odB').value=b;
+  odRows=dayTrains(state.di).map(tr=>{ const sa=tr.stopAt.get(a), sb=tr.stopAt.get(b); return sa&&sb&&sa.j<sb.j ? {tr,dep:sa.tD,arr:sb.tA} : null; })
+    .filter(Boolean).sort((x,y)=>x.dep-y.dep);
+  $('odTable').innerHTML=`<thead><tr><th>車次</th><th>${ST[a].zh} 開</th><th>${ST[b].zh} 到</th><th>行車時間</th><th>往 · 經由</th></tr></thead><tbody>`+
+    odRows.map(r=>`<tr data-pick="${r.tr.id}" data-od="${r.tr.id}"><td><span class="tno ${r.tr.dir}">${r.tr.no}</span></td><td class="tm">${fmt(r.dep)}</td><td class="tm">${fmt(r.arr)}</td><td>${durTxt(r.arr-r.dep)}</td><td class="via">往${ST[r.tr.to].zh} <small>${viaTxt(r.tr)}</small></td></tr>`).join('')+'</tbody>';
+  const fast=odRows.length?odRows.reduce((x,y)=>(y.arr-y.dep)<(x.arr-x.dep)?y:x):null;
+  $('odCount').textContent=a===b?'起站與迄站相同，請重新選擇。':odRows.length?`${md(state.di)} 共 ${odRows.length} 班 EMU3000 直達 · 最快 ${fast.tr.no} 次 ${durTxt(fast.arr-fast.dep)}`:`${md(state.di)} 沒有 EMU3000 直達這兩站，可改選其他車站或日期。`;
+  updateOdStatus();
+}
+function updateOdStatus(){
+  let nextSet=false; const t=state.min;
+  $('odTable').querySelectorAll('tr[data-od]').forEach((r,k)=>{ const row=odRows[k]; if (!row) return;
+    const gone=row.dep<t, next=!gone&&!nextSet; if (next) nextSet=true;
+    r.className=(gone?'gone':'')+(next?' nextup':'')+(state.sel===row.tr.id?' sel':''); });
+}
+
+/* timetable */
+$('ttDir').querySelectorAll('button').forEach(b=>b.onclick=()=>{ state.ttDir=b.dataset.d; $('ttDir').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); renderTimetable(); });
+$('ttCat').onchange=e=>{ state.ttCat=e.target.value; renderTimetable(); };
+$('ttQ').oninput=e=>{ state.ttQ=e.target.value.trim(); renderTimetable(); };
+function renderTimetable(){
+  const rows=dayTrains(state.di).filter(tr=>(state.ttDir==='all'||tr.dir===state.ttDir)&&(state.ttCat==='all'||tr.cat===state.ttCat)&&(!state.ttQ||tr.no.includes(state.ttQ))).sort((a,b)=>a.first-b.first);
+  $('tt').innerHTML=`<thead><tr><th>車次</th><th>起站 開</th><th>迄站 到</th><th>經由</th><th>停站</th></tr></thead><tbody>`+
+    rows.map(tr=>`<tr data-row="${tr.id}" data-pick="${tr.id}"><td><span class="tno ${tr.dir}">${tr.no}</span></td><td><span class="num" style="font-size:16px;font-weight:600">${fmt(tr.first)}</span> <small>${ST[tr.from].zh}</small></td><td><span class="num" style="font-size:16px;font-weight:600">${fmt(tr.last)}</span> <small>${ST[tr.to].zh}</small></td><td class="via">${viaTxt(tr)}</td><td><small>${tr.nStops} 站</small></td></tr>`).join('')+'</tbody>';
+  const dirTxt=state.ttDir==='all'?'':DIRNAME[state.ttDir]+' ', catTxt=state.ttCat==='all'?'':CAT[state.ttCat]+' ';
+  $('ttCount').textContent=`${dateLabel(state.di)} ${catTxt}${dirTxt}共 ${rows.length} 班 · 依起站發車時間排序 · 綠底為運行中`;
+  updateTtStatus();
+}
+function updateTtStatus(){
+  const run=new Set(ACTIVE.map(a=>a.tr.id)), t=state.min;
+  $('tt').querySelectorAll('tr[data-row]').forEach(r=>{ const tr=TRAINS[+r.dataset.row];
+    r.className=(run.has(tr.id)?'run':'')+(!run.has(tr.id)&&t>tr.last?' gone':'')+(state.sel===tr.id?' sel':''); });
+}
+
+/* ── selected train detail ─────────────────────────────── */
+const ART=`<svg class="train-art" viewBox="0 0 420 66" role="img" aria-label="EMU3000 新自強號側視圖">
+  <path d="M0 61H420" stroke="var(--rule)" stroke-width="2"/>
+  <g fill="var(--train-black)"><rect x="70" y="50" width="54" height="7" rx="2"/><rect x="232" y="50" width="54" height="7" rx="2"/><rect x="330" y="50" width="54" height="7" rx="2"/></g>
+  <g fill="var(--muted)"><circle cx="82" cy="57" r="4"/><circle cx="112" cy="57" r="4"/><circle cx="244" cy="57" r="4"/><circle cx="274" cy="57" r="4"/><circle cx="342" cy="57" r="4"/><circle cx="372" cy="57" r="4"/></g>
+  <path d="M300 11H62C44 11 30 14 20 22L8 41C6 45 6 49 10 51L14 53H300Z" fill="var(--train-white)" stroke="var(--coast)" stroke-width="1.2"/>
+  <path d="M306 11H420V53H306Z" fill="var(--train-white)" stroke="var(--coast)" stroke-width="1.2"/>
+  <path d="M21 21.5C30 15.5 42 13.5 58 13.5H78V33H8.5Z" fill="var(--train-black)"/>
+  <path d="M78 19H300M306 19H420" stroke="var(--train-black)" stroke-width="12"/>
+  <g fill="var(--coast)" opacity=".55">${[96,152,208,264].map(x=>`<rect x="${x}" y="15" width="1.4" height="8"/>`).join('')}${[330,386].map(x=>`<rect x="${x}" y="15" width="1.4" height="8"/>`).join('')}</g>
+  <g fill="none" stroke="var(--coast)" stroke-width="1"><rect x="84" y="28" width="11" height="22" rx="1.5"/><rect x="280" y="28" width="11" height="22" rx="1.5"/><rect x="312" y="28" width="11" height="22" rx="1.5"/></g>
+  <path d="M12 46H300M306 46H420" stroke="var(--train-gold)" stroke-width="1.6"/>
+  <text x="200" y="40" text-anchor="middle" font-family="var(--font-display)" font-weight="700" font-size="9" letter-spacing="2" fill="var(--muted)">EMU3000</text>
+</svg>`;
+function carChips(tr){
+  const n=tr.note, out=[];
+  const biz=n.match(/第\s*(\d+)\s*節為騰雲座艙/); if (biz) out.push(`<em class="gold">騰雲座艙 第 ${biz[1]} 車</em>`);
+  const fr=n.match(/第\s*(\d+)\s*(?:[-~–至]\s*(\d+))?\s*節(?:車廂)?為自由座/); if (fr) out.push(`<em>自由座 第 ${fr[1]}${fr[2]?'–'+fr[2]:''} 車</em>`);
+  if (/親子/.test(n)) out.push('<em>親子車廂</em>');
+  if (/實名/.test(n)) out.push('<em>花東實名制優先購票</em>');
+  if (/不發售無座/.test(n)) out.push('<em>不發售無座票</em>');
+  return out.join('');
+}
+function runDays(tr){ const m=tr.note.match(/^[^。]*行駛。?/); return m?m[0].replace(/。$/,''):''; }
+function calendar(tr,cur){
+  const lead=dateOf(0).wd, cells=[];
+  for (let k=0;k<lead;k++) cells.push('<i class="pad"></i>');
+  for (let j=0;j<NDAYS;j++) cells.push(`<i class="${tr.days[j]==='1'?'on':''}${j===cur?' cur':''}" title="${md(j)}（${WD[dateOf(j).wd]}）${tr.days[j]==='1'?'行駛':'不行駛'}"></i>`);
+  return `<div class="cal-grid" aria-hidden="true">${cells.join('')}</div>`;
+}
+// which time the selected train is being judged at: today's run, or last night's run past midnight
+function selContext(tr){
+  if (runsOn(tr,state.di)) return {runs:true,t:state.min};
+  if (runsOn(tr,state.di-1) && state.min+1440<=tr.end) return {runs:true,t:state.min+1440};
+  return {runs:false,t:state.min};
+}
+let detailKey='';
+function renderDetail(){
+  const box=$('detail'); const tr=state.sel!=null?TRAINS[state.sel]:null;
+  if (!tr){ box.hidden=true; detailKey=''; return; }
+  box.hidden=false;
+  const {runs,t}=selContext(tr), st=runs?trainState(tr,t):null, pos=st?trainPos(tr,st):null;
+  const phase=!runs?'off':st?st.mode:(t<tr.start?'before':'after');
+  let status;
+  if (phase==='off') status=`<span>${md(state.di)} 不行駛</span><span>${runDays(tr)||'僅於指定日期行駛'}</span>`;
+  else if (phase==='before') status=`<span>尚未發車</span><span>${ST[tr.from].zh} <b class="num">${fmt(tr.first)}</b> 開</span>`;
+  else if (phase==='after') status=`<span>已抵達 ${ST[tr.to].zh}</span><span><b class="num">${fmt(tr.last)}</b> 到</span>`;
+  else { const [nl,nt]=nextStop(tr,st); status=`<b>${statusText(tr,st)}</b><span>${nl} <b class="num">${fmt(nt)}</b></span><span class="spd"><span id="dSpd">${Math.round(pos.v)}</span><small>km/h 估</small></span>`; }
+  const where=j=>{
+    if (phase==='off') return '';
+    if (phase==='before') return 'todo';
+    if (phase==='after') return 'done';
+    return j<st.j?'done':j>st.j?'todo':st.mode==='run'?'next':'here';
+  };
+  const items=[];
+  tr.stops.forEach((s,j)=>{
+    if (j>0){ const n=s.k-tr.stops[j-1].k-1; if (n>0){ const w=where(j); items.push(`<li class="pass ${w==='done'||w==='here'?'done':''}"><span class="t"></span><span class="pin"><i></i></span><span class="nm">通過 ${n} 站</span><span></span></li>`); } }
+    const w=where(j);
+    const stt = w==='here' ? (st.mode==='wait'?'待發':st.mode==='arrived'?'已抵達':'停靠中') : w==='done' ? (j===tr.stops.length-1?'已抵達':'已開出') : w==='next' ? '即將到站' : '';
+    const chips=(j===0?'<em class="chip">始發</em>':'')+(j===tr.stops.length-1?'<em class="chip">終點</em>':'')+(w==='next'?'<em class="chip nx">下一站</em>':'');
+    const time=j===tr.stops.length-1?fmt(s.tA):fmt(s.tD);
+    const ar=j>0&&j<tr.stops.length-1&&Math.floor(s.tD)-Math.floor(s.tA)>=1?`<small class="ar">${fmt(s.tA)} 到</small>`:'';
+    items.push(`<li class="${w==='here'?'now':w}"><span class="t">${time}</span><span class="pin"><i></i></span><span class="nm">${ST[s.st].zh}${ar}${chips}</span><span class="stt">${stt}</span></li>`);
+  });
+  const cur=proxy(state.di), nDays=[...tr.days].filter(c=>c==='1').length;
+  const html=`<div class="detail-head"><span class="tno ${tr.dir}">${tr.no}</span><div class="grow"><h3>${ST[tr.from].zh} → ${ST[tr.to].zh}</h3><p>自強(3000) · ${DIRNAME[tr.dir]} · ${viaTxt(tr)} · 停靠 ${tr.nStops} 站 · ${fmt(tr.first)}–${fmt(tr.last)} · 行車 ${durTxt(tr.last-tr.first)} · 約 ${Math.round(tr.km)} km</p></div>
+    <div class="detail-actions">${pos?'<button class="btn" id="dLocate">定位</button>':''}<button class="btn icon" id="dClose" aria-label="關閉">✕</button></div></div>
+    ${ART}
+    <div class="status">${status}</div>
+    <div class="chips">${carChips(tr)}</div>
+    <div class="cal">${calendar(tr,cur)}<p><b>${runDays(tr)||'指定日期行駛'}</b><br>公告期間 ${md(0)}–${md(NDAYS-1)} 共 ${NDAYS} 天，本班表行駛 ${nDays} 天。方格一欄為一週（日至六），框線為所選日期。</p></div>
+    <ol class="stops">${items.join('')}</ol>
+    <p class="fleet"><b>EMU3000 新自強號</b>由日立製作所製造，12 輛一編組，共 50 組 600 輛，2021 年 12 月 29 日首航；設計最高時速 150 公里，營運最高 130 公里，第 6 車為商務等級的騰雲座艙。臺鐵備註：${esc(tr.note)}</p>`;
+  const key=html.replace(/<span id="dSpd">\d+<\/span>/,'');
+  if (key!==detailKey){ detailKey=key; box.innerHTML=html;
+    $('dClose').onclick=()=>selectTrain(null);
+    const loc=$('dLocate'); if (loc) loc.onclick=()=>{ const a=ACTIVE.find(x=>x.tr.id===tr.id); if (!a) return; const p=pointAt(tr,a.pos.s); const w=Math.min(vb.w,600); flyTo({x:p.x-w/2,y:p.y-w/2,w,h:w}); clearRegion(); };
+  } else if (pos){ const sp=$('dSpd'); if (sp) sp.textContent=Math.round(pos.v); }
+}
+function selectTrain(id){
+  state.sel=id; runKey=''; drawSelRoute(); renderPanels(); drawTrains(); updateTtStatus(); updateOdStatus();
+  if (id!=null && innerWidth<=960) $('detail').scrollIntoView({behavior:reduced?'auto':'smooth',block:'start'});
+}
+
+/* ── panels ─────────────────────────────── */
+function renderPanels(){
+  const nCW=ACTIVE.filter(a=>a.tr.dir==='cw').length;
+  $('lgCW').textContent=nCW; $('lgCCW').textContent=ACTIVE.length-nCW; $('kRun').textContent=ACTIVE.length; $('tabRunN').textContent=ACTIVE.length;
+  const off=!ACTIVE.length; $('offhours').hidden=!off;
+  if (off){ const list=dayTrains(state.di), first=Math.min(...list.map(t=>t.first)), last=Math.max(...list.map(t=>t.last));
+    $('offText').textContent = state.min<first ? `${md(state.di)} 首班 ${fmt(first)} 發車。` : `${md(state.di)} 末班已於 ${fmt(last)} 抵達。`; }
+  updateChartNow(); renderDetail();
+  if (state.tab==='run') renderRunning(); else if (state.tab==='board') renderBoard(); else if (state.tab==='od') updateOdStatus(); else updateTtStatus();
+}
+function onDayChange(){
+  // keep the selection on the same train number if today's run uses a different schedule
+  if (state.sel!=null){ const tr=TRAINS[state.sel]; if (!selContext(tr).runs){ const alt=dayTrains(state.di).find(x=>x.no===tr.no); if (alt){ state.sel=alt.id; drawSelRoute(); } } }
+  runKey=''; boardKey=''; detailKey=''; renderSummary(); if (state.tab==='tt') renderTimetable(); if (state.tab==='od') renderOD(); syncControls();
+}
+
+/* ── boot ─────────────────────────────── */
+syncLive(); renderDayBtns(); measure(); vb=fitBox(REGIONS.all()); applyVB(); onDayChange(); selectStation(state.st,false); setTab('run');
+let last=performance.now(), lastPanel=0;
+function frame(now){
+  const dt=Math.min(1,(now-last)/1000); last=now;
+  if (state.mode==='live') syncLive();
+  else if (state.playing){
+    state.min+=dt*state.speed/60;
+    if (state.min>=1440){ state.min-=1440; state.di++; onDayChange(); }
+    // skip the small hours once last night's trains are in
+    if (state.min>60 && state.min<300 && !ACTIVE.length) state.min=300;
+  }
+  stepFly(now); drawTrains(); drawClock();
+  if (now-lastPanel>400){ lastPanel=now; renderPanels(); }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
