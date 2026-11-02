@@ -9,7 +9,7 @@ import json, pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 src = (ROOT / "src" / "app.html").read_text(encoding="utf-8")
-tt = json.loads((ROOT / "data" / "emu3000.json").read_text(encoding="utf-8"))
+tt = json.loads((ROOT / "data" / "trains.json").read_text(encoding="utf-8"))
 geo = json.loads((ROOT / "data" / "map.json").read_text(encoding="utf-8"))
 
 compact = lambda o: json.dumps(o, ensure_ascii=False, separators=(",", ":"))
@@ -21,7 +21,7 @@ split = body.index('<div class="app">')
 standalone = (
     '<!doctype html>\n<html lang="zh-Hant">\n<head>\n<meta charset="utf-8">\n'
     '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
-    '<meta name="description" content="依臺鐵每日公開時刻表，在台灣地圖上推算 EMU3000 新自強號沿環島鐵路的即時位置。">\n'
+    '<meta name="description" content="依臺鐵每日公開時刻表，在台灣地圖上推算自強號（新自強、普悠瑪、太魯閣、推拉式）沿環島鐵路的即時位置。">\n'
     + body[:split] + "</head>\n<body>\n" + body[split:] + "\n</body>\n</html>\n"
 )
 dist = ROOT / "dist"

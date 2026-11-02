@@ -30,11 +30,11 @@ jobs:
           python-version: "3.12"
       - name: Refresh timetable from TRA open data
         run: |
-          if python tools/fetch_timetable.py raw && python tools/extract_emu3000.py raw data/emu3000.json; then
+          if python tools/fetch_timetable.py raw && python tools/extract_trains.py raw data/trains.json; then
             echo "Timetable refreshed"
           else
-            echo "::warning::Could not refresh the TRA timetable; building with the committed data/emu3000.json"
-            git checkout -- data/emu3000.json
+            echo "::warning::Could not refresh the TRA timetable; building with the committed data/trains.json"
+            git checkout -- data/trains.json
           fi
       - name: Build site
         run: python tools/build.py
