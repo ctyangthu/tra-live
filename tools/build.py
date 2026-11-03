@@ -21,7 +21,7 @@ split = body.index('<div class="app">')
 standalone = (
     '<!doctype html>\n<html lang="zh-Hant">\n<head>\n<meta charset="utf-8">\n'
     '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
-    '<meta name="description" content="依臺鐵每日公開時刻表，在台灣地圖上推算自強號（新自強、普悠瑪、太魯閣、推拉式）沿環島鐵路的即時位置。">\n'
+    '<meta name="description" content="依臺鐵每日公開時刻表，在台灣地圖上推算臺鐵全車種（自強、莒光、區間快、區間）列車沿環島鐵路的即時位置。">\n'
     + body[:split] + "</head>\n<body>\n" + body[split:] + "\n</body>\n</html>\n"
 )
 dist = ROOT / "dist"

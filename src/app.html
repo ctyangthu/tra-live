@@ -7,12 +7,13 @@
 /* Layout: one-screen operations console. Portrait map of Taiwan with the round-island loop on the
    left, a rail of cards on the right (day summary → selected train → tabs). Stacks on phones.
    Track is drawn as the classic black-and-white railway symbol. Trains are coloured by kind (新自強 keeps
-   its white-and-black livery on the map); the nose points the way the train is going. */
+   its white-and-black livery on the map); the nose points the way the train is going. Commuter trains
+   (區間, 區間快) are drawn smaller and beneath the intercity ones. */
 :root{
   --bg:#E9EDEA; --surface:#FFFFFF; --surface-2:#F1F4F1; --ink:#141A18; --muted:#58645F; --rule:#D2D9D4;
   --sea:#D1E0E2; --land:#F8F7F1; --county:#CAD2CC; --coast:#879792; --branch:#97A39E;
   --accent:#0D6A5A; --accent-ink:#FFFFFF; --accent-soft:#D5EAE3;
-  --k-e3:#1F2629; --k-pym:#C8372D; --k-trk:#7347B8; --k-pp:#C2630E; --k-oth:#2C6AB0; --warn:#B4520F;
+  --k-e3:#1F2629; --k-pym:#C8372D; --k-trk:#7347B8; --k-pp:#C2630E; --k-jg:#D9468F; --k-qk:#B58A00; --k-qj:#2C6AB0; --k-oth:#2E8540; --warn:#B4520F;
   --track:#1D2422; --track-casing:#FFFFFF;
   --train-white:#FBFBF8; --train-black:#16191B; --train-gold:#B08A3E;
   --board-bg:#0D1011; --board-ink:#ECECE4; --board-amber:#FFA23A; --board-green:#5BD08D; --board-dim:#7A8581; --board-rule:#252D2B;
@@ -25,7 +26,7 @@
     --bg:#0B100F; --surface:#121918; --surface-2:#1A2422; --ink:#E3EAE7; --muted:#92A09B; --rule:#24302D;
     --sea:#08100F; --land:#18211F; --county:#2C3936; --coast:#4B5C57; --branch:#55645F;
     --accent:#3FBF9F; --accent-ink:#0B100F; --accent-soft:#183A32;
-    --k-e3:#DCE3E0; --k-pym:#F2695C; --k-trk:#AD8BF0; --k-pp:#F0943E; --k-oth:#6FA6EE; --warn:#F08A45;
+    --k-e3:#DCE3E0; --k-pym:#F2695C; --k-trk:#AD8BF0; --k-pp:#F0943E; --k-jg:#F07AB5; --k-qk:#E3B53A; --k-qj:#6FA6EE; --k-oth:#5CB86A; --warn:#F08A45;
     --track:#E3EAE7; --track-casing:#0B100F; --tno-ink:#0B100F;
     color-scheme:dark;
   }
@@ -34,7 +35,7 @@
   --bg:#0B100F; --surface:#121918; --surface-2:#1A2422; --ink:#E3EAE7; --muted:#92A09B; --rule:#24302D;
   --sea:#08100F; --land:#18211F; --county:#2C3936; --coast:#4B5C57; --branch:#55645F;
   --accent:#3FBF9F; --accent-ink:#0B100F; --accent-soft:#183A32;
-  --k-e3:#DCE3E0; --k-pym:#F2695C; --k-trk:#AD8BF0; --k-pp:#F0943E; --k-oth:#6FA6EE; --warn:#F08A45;
+  --k-e3:#DCE3E0; --k-pym:#F2695C; --k-trk:#AD8BF0; --k-pp:#F0943E; --k-jg:#F07AB5; --k-qk:#E3B53A; --k-qj:#6FA6EE; --k-oth:#5CB86A; --warn:#F08A45;
   --track:#E3EAE7; --track-casing:#0B100F; --tno-ink:#0B100F;
   color-scheme:dark;
 }
@@ -121,7 +122,7 @@ main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax
 #map.z3 .st.t4{display:inline}
 #map .st.t1 .lab,#map.z2 .st.t2 .lab,#map.z3 .st.t3 .lab,#map.z4 .st.t4 .lab{display:inline}
 #map .st.t1 .en,#map.z3 .st.t2 .en,#map.z4 .st.t3 .en{display:inline}
-.k-e3{--k:var(--k-e3)} .k-pym{--k:var(--k-pym)} .k-trk{--k:var(--k-trk)} .k-pp{--k:var(--k-pp)} .k-oth{--k:var(--k-oth)}
+.k-e3{--k:var(--k-e3)} .k-pym{--k:var(--k-pym)} .k-trk{--k:var(--k-trk)} .k-pp{--k:var(--k-pp)} .k-jg{--k:var(--k-jg)} .k-qk{--k:var(--k-qk)} .k-qj{--k:var(--k-qj)} .k-oth{--k:var(--k-oth)}
 .trn{cursor:pointer}
 .trn .hit{fill:transparent}
 .trn .body{fill:var(--k);stroke:var(--track);stroke-width:1.2}
@@ -149,6 +150,7 @@ main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax
 .legend b{font:700 16px var(--font-display);min-width:18px;margin-left:auto;padding-left:8px;text-align:right;font-variant-numeric:tabular-nums}
 .legend small{color:var(--muted);font-size:11px}
 .legend .lg-foot{margin-top:4px}
+.legend .lg-sep{height:1px;background:var(--rule);margin:3px 6px}
 .legend .trk{display:inline-block;width:22px;height:5px;background:repeating-linear-gradient(90deg,var(--track) 0 5px,var(--track-casing) 5px 10px);border:1.5px solid var(--track);border-radius:2px}
 .mapctl{position:absolute;left:12px;bottom:12px;display:flex;flex-direction:column;align-items:flex-start;gap:8px}
 .mapctl .ov{position:static}
@@ -183,7 +185,7 @@ main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax
 .chart .nowl{stroke:var(--ink);stroke-width:1;stroke-dasharray:2 2}
 .chart .nowd{fill:var(--ink)}
 .chart .nowt{fill:var(--ink);font-size:11px;font-weight:700}
-.cats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:10px}
+.cats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:10px}
 .cats button{border:1px solid var(--rule);background:var(--surface);border-radius:9px;padding:6px 8px;display:grid;justify-items:start;text-align:left;gap:0}
 .cats button:hover{background:var(--surface-2)}
 .cats b{font:600 20px/1.1 var(--font-display);font-variant-numeric:tabular-nums}
@@ -202,6 +204,7 @@ main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax
 /* train number badge */
 .tno{display:inline-flex;align-items:center;justify-content:center;min-width:46px;padding:1px 7px;border-radius:6px;font:700 16px/1.3 var(--font-display);letter-spacing:.03em;font-variant-numeric:tabular-nums;color:var(--tno-ink)}
 .tno{background:var(--k)}
+.tno.k-qk{color:#141A18}  /* white on gold is too faint */
 .kn{font-size:11.5px;color:var(--muted);margin-left:6px}
 
 /* detail */
@@ -347,7 +350,9 @@ main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax
   .play input[type=range]{min-width:60px}
   .play output{min-width:38px}
   .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .cats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .cats{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .legend .lg-kinds{grid-template-columns:repeat(2,auto);column-gap:2px}
+  .legend .lg-sep{display:none}
   .regions button{padding:4px 7px}
   .legend{font-size:12px}
 }
@@ -369,7 +374,7 @@ main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax
       </svg>
       <div>
         <h1>台鐵環島動態系統</h1>
-        <p id="subTitle">自強號 · 新自強・普悠瑪・太魯閣・推拉式 · 臺鐵每日公告時刻表</p>
+        <p id="subTitle">全車種 · 自強・莒光・區間快・區間 · 臺鐵每日公告時刻表</p>
       </div>
     </div>
     <div class="clock">
@@ -396,7 +401,7 @@ main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax
 
   <main>
     <section class="mapwrap" aria-label="台灣環島鐵路路線圖">
-      <svg id="map" role="img" aria-label="台灣地圖與自強號列車位置">
+      <svg id="map" role="img" aria-label="台灣地圖與臺鐵列車位置">
         <rect id="sea" fill="var(--sea)"/>
         <g class="land" id="land"></g>
         <path class="tropic" id="tropic"/>
@@ -406,8 +411,11 @@ main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax
         <g class="loopi" id="loopi"></g>
         <g id="fixedLabels"></g>
         <g id="stations"></g>
+        <g id="trainsLo"></g>
+        <g id="trainLabelsLo"></g>
         <g id="trains"></g>
         <g id="trainLabels"></g>
+        <g id="trainSel"></g>
       </svg>
       <div class="ov legend">
         <div class="lg-h"><span>車種 · 點選顯示或隱藏</span><span>運行中</span></div>
@@ -429,7 +437,7 @@ main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax
         <button id="zOut" aria-label="縮小">−</button>
       </div>
       <div class="ov offhours" id="offhours" hidden>
-        <b id="offTitle">目前沒有自強號運行</b>
+        <b id="offTitle">目前沒有列車運行</b>
         <span id="offText">營運時間約 05:20 至 24:00。</span>
         <div style="margin-top:10px"><button class="btn" data-jump="480">看 08:00</button></div>
       </div>
@@ -477,7 +485,7 @@ main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax
         <div id="pane-tt" hidden>
           <div class="ttbar">
             <div class="seg" id="ttDir"><button data-d="all" aria-pressed="true">全部</button><button data-d="cw" aria-pressed="false">順行</button><button data-d="ccw" aria-pressed="false">逆行</button></div>
-            <select id="ttCat" aria-label="路線"><option value="all">全部路線</option><option value="W">西部幹線</option><option value="E">東部幹線</option><option value="S">經南迴線</option><option value="X">西部↔東部</option></select>
+            <select id="ttCat" aria-label="路線"><option value="all">全部路線</option><option value="W">西部幹線</option><option value="E">東部幹線</option><option value="S">經南迴線</option><option value="X">西部↔東部</option><option value="B">支線</option></select>
             <input type="search" id="ttQ" placeholder="車次" inputmode="numeric" aria-label="搜尋車次">
           </div>
           <div class="ttwrap"><table class="tt" id="tt"></table></div>
@@ -486,7 +494,7 @@ main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax
       </section>
 
       <p class="foot">
-        資料來源：臺鐵公司開放資料〈鐵路時刻表 JSON〉（<a href="https://ods.railway.gov.tw/tra-ods-web/ods/download/dataResource/railway_schedule/JSON/list" target="_blank" rel="noopener">ods.railway.gov.tw</a>）與車站基本資料，車種依<a href="https://www.railway.gov.tw/tra-tip-web/tip" target="_blank" rel="noopener">臺鐵時刻查詢</a>的標示：自強(3000)、普悠瑪、太魯閣、自強、自強(專)。列車位置依時刻表推算（車站間以直線相連、加減速為估算），不含誤點等即時資訊。本系統為非官方展示，實際行車以臺鐵公告為準。
+        資料來源：臺鐵公司開放資料〈鐵路時刻表 JSON〉（<a href="https://ods.railway.gov.tw/tra-ods-web/ods/download/dataResource/railway_schedule/JSON/list" target="_blank" rel="noopener">ods.railway.gov.tw</a>）與車站基本資料，車種依<a href="https://www.railway.gov.tw/tra-tip-web/tip" target="_blank" rel="noopener">臺鐵時刻查詢</a>的標示：自強(3000)、普悠瑪、太魯閣、自強、自強(專)、莒光、莒光(專)、區間快、區間、區間(專)、普快(專)。列車位置依時刻表推算（車站間以直線相連、加減速為估算），不含誤點等即時資訊。本系統為非官方展示，實際行車以臺鐵公告為準。
       </p>
     </aside>
   </main>
@@ -511,8 +519,8 @@ const proj = (lat,lon) => [(lon-LON0)*COS*K, (LAT0-lat)*K];
 const KM_PER_UNIT = 0.11119;  // 1/1000° of latitude
 const TRACK_FACTOR = 1.05;    // straight station-to-station lines run a little shorter than the track
 
-// 自強號 kinds (KIND in tools/extract_trains.py); g is the colour and filter group,
-// vmax a rough top operating speed in km/h that shapes the acceleration estimate
+// train kinds (KIND in tools/extract_trains.py); g is the colour and filter group, vmax a rough top
+// operating speed in km/h that shapes the acceleration estimate, local marks commuter trains
 const KINDS = {
   E3: {g:'e3', name:'新自強', label:'自強(3000)', series:'EMU3000', vmax:130,
     fleet:'<b>EMU3000 新自強號</b>由日立製作所製造，12 輛一編組，共 50 組 600 輛，2021 年 12 月 29 日首航；設計最高時速 150 公里，營運最高 130 公里，第 6 車為商務等級的騰雲座艙。'},
@@ -527,8 +535,23 @@ const KINDS = {
   SP: {g:'oth', name:'專開', label:'自強(專)', series:'自強號', vmax:110,
     fleet:'<b>自強號專開列車</b>是配合連續假期疏運或觀光行程開行的班次，例如需搭配套裝行程的環島之星。'},
   TC: {g:'oth', name:'自強', label:'自強', series:'自強號', vmax:110, fleet:'<b>自強號</b>。'},
+  JG: {g:'jg', name:'莒光', label:'莒光', series:'莒光號', vmax:110,
+    fleet:'<b>莒光號</b>由機車牽引客車廂行駛，是對號入座的城際列車，停站比自強號多。'},
+  JGS:{g:'jg', name:'莒光', label:'莒光(專)', series:'莒光號', vmax:110,
+    fleet:'<b>莒光號專開列車</b>是配合連續假期疏運或活動加開的莒光號班次。'},
+  QK: {g:'qk', name:'區間快', label:'區間快', series:'區間快車', vmax:110, local:true,
+    fleet:'<b>區間快車</b>由通勤電聯車行駛，只停靠沿線主要車站；不需對號，可使用電子票證搭乘。'},
+  QJ: {g:'qj', name:'區間', label:'區間', series:'區間車', vmax:110, local:true,
+    fleet:'<b>區間車</b>停靠沿線各站，主要由通勤電聯車行駛，非電氣化支線使用柴油客車；不需對號，可使用電子票證搭乘。'},
+  QJS:{g:'qj', name:'區間', label:'區間(專)', series:'區間車', vmax:110, local:true,
+    fleet:'<b>區間車專開列車</b>是配合連續假期或活動加開的區間車班次。'},
+  PK: {g:'oth', name:'普快', label:'普快(專)', series:'普快車', vmax:70, local:true,
+    fleet:'<b>普快車專開列車</b>依指定日期行駛，例如南迴線的觀光普快車。'},
+  OT: {g:'oth', name:'列車', label:'列車', series:'臺鐵', vmax:110, fleet:'<b>臺鐵列車</b>。'},
 };
-const GROUPS = [['e3','新自強','EMU3000'],['pym','普悠瑪','TEMU2000'],['trk','太魯閣','TEMU1000'],['pp','推拉式自強','PP'],['oth','其他自強','柴聯・專開']];
+// [group, name, legend note, is 自強號]; the order is the legend's and the chart's stacking order
+const GROUPS = [['e3','新自強','EMU3000',1],['pym','普悠瑪','TEMU2000',1],['trk','太魯閣','TEMU1000',1],['pp','推拉式自強','PP',1],
+  ['jg','莒光','對號'],['qk','區間快','主要站停車'],['qj','區間','各站停車'],['oth','其他','柴聯自強・專開・普快']];
 
 /* ── stations and track graph ─────────────────────────────── */
 const LINES = D.lines;
@@ -545,12 +568,16 @@ const dist = (a,b) => Math.hypot(ST[a].x-ST[b].x, ST[a].y-ST[b].y);
 const LEGS = [['縱貫線','基隆—竹南','0900','1250',1],['山線','竹南—彰化','1250','3360',2],['海線','竹南—彰化','1250','3360',3],
   ['縱貫線','彰化—高雄','3360','4400',1],['屏東線','高雄—枋寮','4400','5120',4],['南迴線','枋寮—臺東','5120','6000',5],
   ['臺東線','臺東—花蓮','6000','7000',6],['北迴線','花蓮—蘇澳新','7000','7130',7],['宜蘭線','蘇澳新—八堵','7130','0920',8]];
-function walk(a,b,line){
-  const s=BYCODE.get(a), t=BYCODE.get(b), prev=new Map([[s,-1]]), q=[s];
+function walk(s,t,line){
+  const prev=new Map([[s,-1]]), q=[s];
   while(q.length){ const u=q.shift(); if(u===t) break; for(const v of ST[u].nb) if(!prev.has(v) && lineOf(u,v)===line){ prev.set(v,u); q.push(v); } }
   const out=[t]; while(prev.get(out[out.length-1])!==-1) out.push(prev.get(out[out.length-1])); return out.reverse();
 }
-const LEG_STATIONS = LEGS.map(([name,span,a,b,l])=>({name,span,sts:walk(a,b,l)}));
+const LEG_STATIONS = LEGS.map(([name,span,a,b,l])=>({name,span,sts:walk(BYCODE.get(a),BYCODE.get(b),l)}));
+// branch lines, named for the station list and a train's route (成追線 and 蘇澳 are only connectors)
+const BRANCHES = [['平溪線','三貂嶺','菁桐'],['深澳線','瑞芳','八斗子'],['內灣線','北新竹','內灣'],['六家線','竹中','六家'],['集集線','二水','車埕'],['沙崙線','中洲','沙崙']]
+  .filter(([,a,b])=>BYNAME.has(a)&&BYNAME.has(b)).map(([name,a,b])=>({name,span:`${a}—${b}`,sts:walk(BYNAME.get(a),BYNAME.get(b),0)}));
+const BR_EDGE = new Map(); for (const b of BRANCHES) for (let k=1;k<b.sts.length;k++) BR_EDGE.set(ek(b.sts[k-1],b.sts[k]),b.name);
 
 // track drawn as chains between junctions or line changes
 const isEnd = i => ST[i].nb.length!==2 || lineOf(i,ST[i].nb[0])!==lineOf(i,ST[i].nb[1]);
@@ -566,7 +593,7 @@ const CHAINS=[]; { const seen=new Set();
 const PRE=10, POST=3;   // minutes shown at the origin before departure / at the terminus after arrival
 const fmt = m => { m=((Math.floor(m+1e-6)%1440)+1440)%1440; return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); };
 const durTxt = m => { m=Math.round(m); const h=Math.floor(m/60); return h ? `${h} 小時 ${String(m%60).padStart(2,'0')} 分` : `${m} 分`; };
-const CAT = {W:'西部幹線', E:'東部幹線', S:'經南迴線', X:'西部↔東部'};
+const CAT = {W:'西部幹線', E:'東部幹線', S:'經南迴線', X:'西部↔東部', B:'支線'};
 const DIRNAME = {cw:'順行', ccw:'逆行'};
 const TRAINS = D.trains.map((r,id)=>{
   const nodes=r.r.map(x=>x[0]), cum=[0];
@@ -575,21 +602,22 @@ const TRAINS = D.trains.map((r,id)=>{
   r.r.forEach((x,k)=>{ if (x.length>1) stops.push({k,st:x[0],tA:x[1],tD:x[2],arr:x[1],dep:x[2],s:cum[k]}); });
   const o=stops[0], z=stops[stops.length-1];
   o.arr=o.tD-PRE; z.dep=z.tA+POST;
-  // km per line, and the lines a passenger would name (縱貫線 is the trunk everyone shares)
-  const km=new Array(LINES.length).fill(0), seq=[]; let westTrunk=0;
+  // km per line, and the lines a passenger would name (縱貫線 is the trunk everyone shares; branch lines by name)
+  const km=new Array(LINES.length).fill(0), seq=[]; let westTrunk=0, branchKm=0;
   for (let k=1;k<nodes.length;k++){
-    const l=lineOf(nodes[k-1],nodes[k]), d=dist(nodes[k-1],nodes[k])*KM_PER_UNIT*TRACK_FACTOR;
-    km[l]+=d; if (l===1 && ST[nodes[k]].lat<24.68) westTrunk+=d; if (seq[seq.length-1]!==l) seq.push(l);
+    const l=lineOf(nodes[k-1],nodes[k]), d=dist(nodes[k-1],nodes[k])*KM_PER_UNIT*TRACK_FACTOR, b=BR_EDGE.get(ek(nodes[k-1],nodes[k]));
+    km[l]+=d; if (b) branchKm+=d; if (l===1 && ST[nodes[k]].lat<24.68) westTrunk+=d;
+    const name=b||l; if (seq[seq.length-1]!==name) seq.push(name);
   }
-  const via=[...new Set(seq.filter(l=>l>1 && km[l]>=15))].map(l=>LINES[l]);
-  const W=km[2]+km[3]+km[4]+westTrunk>0, E=km[6]+km[7]+km[8]>0, S=km[5]>0;
-  stops.forEach(s=>ST[s.st].stop=true);
+  const via=[...new Set(seq.filter(x=>typeof x==='string' || (x>1 && km[x]>=15)))].map(x=>typeof x==='string'?x:LINES[x]);
+  const W=km[2]+km[3]+km[4]+westTrunk>0, E=km[6]+km[7]+km[8]>0, S=km[5]>0, total=km.reduce((a,b)=>a+b,0);
+  const kind=KINDS[r.k]||KINDS.OT;
+  stops.forEach(s=>{ ST[s.st].stop=true; if (!kind.local) ST[s.st].major=true; });
   // 環島之星 calls at 臺北 at both ends of its loop; stopAt keeps the first call
   const stopAt=new Map(); stops.forEach((s,j)=>{ s.j=j; if (!stopAt.has(s.st)) stopAt.set(s.st,s); });
-  const kind=KINDS[r.k]||KINDS.TC;
   return {id,no:r.no,cls:r.c,kind,g:kind.g,bike:!!r.b,dir:r.d===1?'cw':'ccw',note:D.notes[r.n],days:r.days,nodes,cum,stops,
     stopAt,from:o.st,to:z.st,start:o.arr,end:z.dep,first:o.tD,last:z.tA,
-    km:km.reduce((a,b)=>a+b,0),via,cat:S?'S':W&&E?'X':E?'E':'W',nStops:stops.length};
+    km:total,via,cat:branchKm*2>=total?'B':S?'S':W&&E?'X':E?'E':'W',nStops:stops.length};
 });
 const NDAYS = TRAINS[0].days.length;
 const DAYTR = Array.from({length:NDAYS},(_,j)=>TRAINS.filter(t=>t.days[j]==='1'));
@@ -632,7 +660,7 @@ const dayTrains = i => DAYTR[proxy(i)];
 const runsOn = (tr,i) => tr.days[proxy(i)]==='1';
 // the trains of a date whose kind is switched on in the legend
 const shown = i => dayTrains(i).filter(tr=>state.show.has(tr.g));
-const kindsTxt = () => state.show.size===GROUPS.length ? '自強號' : '所選車種';
+const kindsTxt = () => state.show.size===GROUPS.length ? '列車' : '所選車種';
 const md = i => { const d=dateOf(i); return `${d.mo}/${d.d}`; };
 const dateLabel = i => { const d=dateOf(i); return `${d.y}/${d.mo}/${d.d}（${WD[d.wd]}）`; };
 const ISO = i => { const d=dateOf(i); return `${d.y}-${String(d.mo).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`; };
@@ -680,7 +708,7 @@ function addFixed(el,x,y,parent){ (parent||$('fixedLabels')).appendChild(el); fi
   g.appendChild(svgEl('text',{class:cls,'text-anchor':anc,y:cls.includes('small')?-5:0},txt)); addFixed(g,x,y);
 });
 
-// label tiers: 1 always, 2 from regional zoom, 3 every 自強號 stop when closer, 4 every station
+// label tiers: 1 always, 2 from regional zoom, 3 every 自強號 or 莒光號 stop when closer, 4 every station
 const TIER1=['基隆','臺北','新竹','臺中','彰化','嘉義','臺南','高雄','屏東','枋寮','臺東','玉里','花蓮','宜蘭'];
 const TIER2=['七堵','南港','松山','板橋','樹林','桃園','中壢','竹南','苗栗','豐原','沙鹿','大甲','通霄','員林','斗六','新營','新左營','潮州','大武','知本','池上','關山','光復','鳳林','蘇澳新','羅東','礁溪','瑞芳','鹿野','瑞穗'];
 const LBL={ '基隆':[10,-8,'start'],'臺北':[0,-13,'middle'],'七堵':[2,17,'middle'],'南港':[6,-11,'start'],'松山':[0,19,'middle'],'板橋':[0,19,'middle'],
@@ -691,7 +719,7 @@ function labelPos(s){
   return right ? [11,4,'start'] : [-11,4,'end'];
 }
 const stEls=ST.map(s=>{
-  const tier=TIER1.includes(s.zh)?1:TIER2.includes(s.zh)?2:s.stop?3:4;
+  const tier=TIER1.includes(s.zh)?1:TIER2.includes(s.zh)?2:s.major?3:4;
   const [lx,ly,anc]=labelPos(s), r=tier===1?4.6:tier===4?1.8:3.2;
   const g=svgEl('g',{class:`st t${tier}`,'data-st':s.i,role:'button','aria-label':s.zh+'站'});
   g.innerHTML=`<circle class="hit" r="11"/><circle class="dot" r="${r}"/><g class="lab"><text class="zh" x="${lx}" y="${ly}" text-anchor="${anc}">${esc(s.zh)}</text><text class="en" x="${lx}" y="${ly+11}" text-anchor="${anc}">${esc(s.en)}</text></g>`;
@@ -772,12 +800,14 @@ document.querySelectorAll('.regions button').forEach(b=>b.onclick=()=>setRegion(
 /* trains on the map */
 const trainEls=new Map(); let ALL=[], ACTIVE=[];  // running trains of every kind / of the kinds shown
 const BODY='M-14,-4H8.5C11.5,-4 13.6,-2.8 15,-1.1V1.1C13.6,2.8 11.5,4 8.5,4H-14Q-15.5,4 -15.5,2.5V-2.5Q-15.5,-4 -14,-4Z';
+const LAYERS={lo:[$('trainsLo'),$('trainLabelsLo')], hi:[$('trains'),$('trainLabels')], sel:$('trainSel')};
 function makeTrainEl(tr){
   const g=svgEl('g',{class:'trn k-'+tr.g,'data-tid':tr.id,role:'button','aria-label':`${tr.kind.name} ${tr.no} 次 ${DIRNAME[tr.dir]}`});
   g.innerHTML=`<circle class="ring" r="11"/><circle class="hit" r="15"/><path class="body" d="${BODY}"/><path class="band" d="M-13,-1.2H8"/><path class="mask" d="M9,-3.3C11.6,-3.1 13.3,-2 14.2,-0.9V0.9C13.3,2 11.6,3.1 9,3.3Z"/>`;
   const lab=svgEl('text',{class:'tlabel k-'+tr.g},tr.no);
-  $('trains').appendChild(g); $('trainLabels').appendChild(lab);
-  return {g,lab};
+  const [home,labs]=LAYERS[tr.kind.local?'lo':'hi'];
+  home.appendChild(g); labs.appendChild(lab);
+  return {g,lab,home};
 }
 // trains of the date, plus last night's trains still running after midnight
 function computeActive(){
@@ -789,22 +819,29 @@ function computeActive(){
 }
 function drawTrains(){
   ALL=computeActive(); ACTIVE=ALL.filter(a=>state.show.has(a.tr.g));
-  const k=1/pxPerUnit, size=pxPerUnit<0.2?0.56:pxPerUnit<0.36?0.68:pxPerUnit<0.8?0.85:1.05, showLabels=pxPerUnit>0.55, seen=new Set();
+  const k=1/pxPerUnit, zs=pxPerUnit<0.2?0.56:pxPerUnit<0.36?0.68:pxPerUnit<0.8?0.85:1.05, seen=new Set();
   for (const a of ACTIVE){
     const {tr,st,pos}=a; let el=trainEls.get(tr.id); if (!el){ el=makeTrainEl(tr); trainEls.set(tr.id,el); }
     seen.add(tr.id);
+    const local=tr.kind.local, size=local?zs*0.7:zs;      // commuter trains drawn smaller
     const p=pointAt(tr,pos.s), hx=p.tx, hy=p.ty;          // heading along the train's own route
     const off=(3+4.5*size)*k, x=p.x+hy*off, y=p.y-hx*off; // TRA runs on the left
     const ang=Math.atan2(hy,hx)*180/Math.PI, sel=state.sel===tr.id;
-    el.g.setAttribute('transform',`translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${ang.toFixed(1)}) scale(${(k*size*(sel?1.35:1)).toFixed(4)})`);
-    el.g.classList.toggle('sel',sel); el.g.classList.toggle('dwell',st.mode!=='run');
+    // ~160 trains at the evening peak: touch the DOM only when something visible changed
+    const tf=`translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${ang.toFixed(1)}) scale(${(k*size*(sel?1.35:1)).toFixed(4)})`;
+    if (el.tf!==tf){ el.tf=tf; el.g.setAttribute('transform',tf); }
+    const cls=(sel?' sel':'')+(st.mode!=='run'?' dwell':'');
+    if (el.cls!==cls){ el.cls=cls; el.g.classList.toggle('sel',sel); el.g.classList.toggle('dwell',st.mode!=='run'); }
+    const par=sel?LAYERS.sel:el.home; if (el.g.parentNode!==par) par.appendChild(el.g);
+    const show=sel||pxPerUnit>(local?1.3:0.55);
+    if (el.show!==show){ el.show=show; el.lab.style.display=show?'':'none'; }
+    if (!show) continue;
     const lx=p.x+hy*off*3.3, ly=p.y-hx*off*3.3;
-    el.lab.setAttribute('transform',`translate(${lx.toFixed(1)} ${(ly+4*k).toFixed(1)}) scale(${k.toFixed(4)})`);
-    el.lab.setAttribute('text-anchor', Math.abs(hy)<.35?'middle':(hy>0?'start':'end'));
-    el.lab.style.display=(showLabels||sel)?'':'none';
+    const ltf=`translate(${lx.toFixed(1)} ${(ly+4*k).toFixed(1)}) scale(${k.toFixed(4)})`, anc=Math.abs(hy)<.35?'middle':(hy>0?'start':'end');
+    if (el.ltf!==ltf){ el.ltf=ltf; el.lab.setAttribute('transform',ltf); }
+    if (el.anc!==anc){ el.anc=anc; el.lab.setAttribute('text-anchor',anc); }
   }
   for (const [id,el] of trainEls) if (!seen.has(id)){ el.g.remove(); el.lab.remove(); trainEls.delete(id); }
-  if (state.sel!=null && trainEls.has(state.sel)){ const el=trainEls.get(state.sel); if (el.g.nextSibling) $('trains').appendChild(el.g); }
 }
 function drawSelRoute(){
   const r=$('selRoute'), tr=state.sel!=null?TRAINS[state.sel]:null;
@@ -865,7 +902,7 @@ function renderSummary(){
     for (const t of prev) if (m+1440>=t.first&&m+1440<=t.last) c[t.g]++;
     curve.push([m,c,Object.values(c).reduce((a,b)=>a+b,0)]); }
   curveMax=Math.max(4,...curve.map(p=>p[2]));
-  const step=curveMax>20?10:5, top=Math.ceil(curveMax/step)*step, chY=c=>CH.y0-(c/top)*(CH.y0-CH.y1);
+  const step=curveMax>200?50:curveMax>20?10:5, top=Math.ceil(curveMax/step)*step, chY=c=>CH.y0-(c/top)*(CH.y0-CH.y1);
   const pathOf=pts=>pts.map(([x,y],k)=>`${k?'L':'M'}${x.toFixed(1)},${y.toFixed(1)}`).join('');
   let base=curve.map(()=>0), areas='';
   for (const [g] of GROUPS){
@@ -892,7 +929,7 @@ function renderSummary(){
   $('sumNote').className='note'+(p!==i?' warn':'');
   $('sumNote').innerHTML = p!==i
     ? `${dateLabel(i)}不在臺鐵已公告的時刻表範圍（${md(0)}–${md(NDAYS-1)}），暫以同為週${WD[weekday]}的 ${md(p)} 班表推算。`
-    : `自強號本日行駛 <b>${all.length}</b> 班${hidden.length?`，隱藏${hidden.join('、')}後顯示 <b>${list.length}</b> 班`:''}；最多同時有 <b>${peak[2]}</b> 列在線（約 ${fmt(peak[0])}）。班次依臺鐵每日公告時刻表，共涵蓋 ${md(0)}–${md(NDAYS-1)}。`;
+    : `本日共 <b>${all.length}</b> 班列車${hidden.length?`，隱藏${hidden.join('、')}後顯示 <b>${list.length}</b> 班`:''}；最多同時有 <b>${peak[2]}</b> 列在線（約 ${fmt(peak[0])}）。班次依臺鐵每日公告時刻表，共涵蓋 ${md(0)}–${md(NDAYS-1)}。`;
 }
 function updateChartNow(){
   const top=+$('dayChart').dataset.top||1, m=state.min, inRange=m>=CH.m0&&m<=CH.m1;
@@ -904,7 +941,8 @@ function updateChartNow(){
 }
 
 /* ── kind filter (map legend and summary chips) ─────────────────────────────── */
-$('lgKinds').innerHTML=GROUPS.map(([g,name,sub])=>`<button class="row k-${g}" data-k="${g}" aria-pressed="true"><span class="sw"></span><span>${name}</span><small>${sub}</small><b id="lg-${g}">0</b></button>`).join('');
+$('lgKinds').innerHTML=GROUPS.map(([g,name,sub,tze],j)=>(j&&!tze&&GROUPS[j-1][3]?'<div class="lg-sep"></div>':'')+
+  `<button class="row k-${g}" data-k="${g}" aria-pressed="true"><span class="sw"></span><span>${name}</span><small>${sub}</small><b id="lg-${g}">0</b></button>`).join('');
 function renderLegend(){
   $('lgKinds').querySelectorAll('[data-k]').forEach(b=>{ const on=state.show.has(b.dataset.k); b.setAttribute('aria-pressed',on); b.title=`在地圖與列表${on?'隱藏':'顯示'}${b.children[1].textContent}`; });
 }
@@ -922,7 +960,7 @@ document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setTab(b.data
 function setTab(t){ state.tab=t; document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t)); TABS.forEach(k=>$('pane-'+k).hidden=k!==t); if (t==='tt') renderTimetable(); if (t==='od') renderOD(); renderPanels(); }
 
 /* running list */
-let runKey='';
+let runKey='', runRows=new Map();
 function statusText(tr,st){
   if (!st) return '';
   if (st.mode==='wait') return `${ST[tr.from].zh} 待發`;
@@ -940,23 +978,28 @@ const progress=(tr,t)=>Math.max(0,Math.min(1,(t-tr.first)/(tr.last-tr.first)));
 function renderRunning(){
   const pane=$('pane-run'), list=[...ACTIVE].sort((a,b)=>a.tr.dir===b.tr.dir? a.tr.first-b.tr.first : a.tr.dir==='cw'?-1:1);
   const nCW=list.filter(a=>a.tr.dir==='cw').length;
-  const key=state.di+'|'+state.sel+'|'+list.map(a=>a.tr.id+statusText(a.tr,a.st)).join(',');
+  const key=state.di+'|'+state.sel+'|'+list.map(a=>a.tr.id).join(',');
   if (key!==runKey){
-    runKey=key;
+    runKey=key; runRows=new Map();
     if (!list.length) pane.innerHTML=`<div class="empty">此刻沒有${kindsTxt()}運行（${md(state.di)} ${fmt(state.min)}）。<button class="btn" data-jump="480">看 08:00</button></div>`;
     else pane.innerHTML=`<div class="subhead"><span>順行 <b>${nCW}</b> · 逆行 <b>${list.length-nCW}</b></span><span>依起站發車時間排序</span></div><ul class="runlist">`+list.map(({tr,st})=>{
-      const [nl,nt]=nextStop(tr,st);
-      return `<li><button class="runrow k-${tr.g}${state.sel===tr.id?' sel':''}" data-pick="${tr.id}"><span class="tno k-${tr.g}">${tr.no}</span><span class="rm"><b>${ST[tr.from].zh} → ${toName(tr)}</b><small>${tr.kind.name} · ${statusText(tr,st)} · ${viaTxt(tr)}</small></span><span class="rn"><small>${nl}</small><b>${fmt(nt)}</b></span><span class="pg"><i data-pg="${tr.id}" data-t="${st.mode==='wait'?0:1}"></i></span></button></li>`;
+      return `<li><button class="runrow k-${tr.g}${state.sel===tr.id?' sel':''}" data-pick="${tr.id}"><span class="tno k-${tr.g}">${tr.no}</span><span class="rm"><b>${ST[tr.from].zh} → ${toName(tr)}</b><small>${tr.kind.name} · <span data-ss></span> · ${viaTxt(tr)}</small></span><span class="rn"><small data-nl></small><b data-nt></b></span><span class="pg"><i></i></span></button></li>`;
     }).join('')+'</ul>';
+    pane.querySelectorAll('.runrow').forEach(b=>runRows.set(+b.dataset.pick,{ss:b.querySelector('[data-ss]'),nl:b.querySelector('[data-nl]'),nt:b.querySelector('[data-nt]'),pg:b.querySelector('.pg i')}));
   }
-  const tOf=new Map(ACTIVE.map(a=>[a.tr.id,a.t]));
-  pane.querySelectorAll('[data-pg]').forEach(i=>{ const tr=TRAINS[+i.dataset.pg]; i.style.width=(progress(tr,tOf.get(tr.id)??state.min)*100).toFixed(1)+'%'; });
+  for (const {tr,st,t} of list){ const row=runRows.get(tr.id); if (!row) continue;
+    const [nl,nt]=nextStop(tr,st), v=[statusText(tr,st),nl,fmt(nt)], w=(progress(tr,t)*100).toFixed(1)+'%';
+    [row.ss,row.nl,row.nt].forEach((e,j)=>{ if (e.textContent!==v[j]) e.textContent=v[j]; });
+    if (row.pg.style.width!==w) row.pg.style.width=w; }
 }
 document.addEventListener('click',e=>{ const p=e.target.closest('[data-pick]'); if (p) selectTrain(+p.dataset.pick); });
 
-/* station pickers: 自強號 stops grouped by line, in loop order */
+/* station pickers: served stations grouped by line, loop order first, then branch lines */
 const STOP_GROUPS=[]; { const seen=new Set();
-  for (const g of LEG_STATIONS){ const sts=g.sts.filter(i=>ST[i].stop && !seen.has(i)); sts.forEach(i=>seen.add(i)); if (sts.length) STOP_GROUPS.push({label:`${g.name}（${g.span}）`,sts}); } }
+  for (const g of [...LEG_STATIONS,...BRANCHES]){ const sts=g.sts.filter(i=>ST[i].stop && !seen.has(i)); sts.forEach(i=>seen.add(i)); if (sts.length) STOP_GROUPS.push({label:`${g.name}（${g.span}）`,sts}); }
+  // anything else (蘇澳) goes right after a neighbour already listed
+  for (const s of ST) if (s.stop && !seen.has(s.i)){ const g=STOP_GROUPS.find(g=>s.nb.some(n=>g.sts.includes(n)));
+    if (g){ const at=g.sts.findIndex(n=>s.nb.includes(n)); g.sts.splice(at+1,0,s.i); seen.add(s.i); } } }
 const stopOptions=STOP_GROUPS.map(g=>`<optgroup label="${g.label}">${g.sts.map(i=>`<option value="${i}">${ST[i].zh}</option>`).join('')}</optgroup>`).join('');
 ['stSel','odA','odB'].forEach(id=>$(id).innerHTML=stopOptions);
 
@@ -1021,7 +1064,7 @@ function renderTimetable(){
 function updateTtStatus(){
   const run=new Set(ACTIVE.map(a=>a.tr.id)), t=state.min;
   $('tt').querySelectorAll('tr[data-row]').forEach(r=>{ const tr=TRAINS[+r.dataset.row];
-    r.className=(run.has(tr.id)?'run':'')+(!run.has(tr.id)&&t>tr.last?' gone':'')+(state.sel===tr.id?' sel':''); });
+    const c=(run.has(tr.id)?'run':'')+(!run.has(tr.id)&&t>tr.last?' gone':'')+(state.sel===tr.id?' sel':''); if (r.className!==c) r.className=c; });
 }
 
 /* ── selected train detail ─────────────────────────────── */

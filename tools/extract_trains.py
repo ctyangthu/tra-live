@@ -1,5 +1,5 @@
-"""Extract every 自強號 train (EMU3000, 普悠瑪, 太魯閣, 推拉式, 柴聯, 專開) and the track graph
-from TRA daily timetables.
+"""Extract every TRA passenger train (自強號 of every type, 莒光號, 區間快車, 區間車, 普快車)
+and the track graph from TRA daily timetables.
 
     python3 tools/extract_trains.py RAW_DIR data/trains.json
 
@@ -20,15 +20,19 @@ is TRA's station list (code, name, GPS). Output:
 import datetime, heapq, json, math, pathlib, sys
 from collections import defaultdict
 
-# Every TRA car class starting with 110 is a 自強號. railway.gov.tw labels them 自強(3000), 普悠瑪,
-# 太魯閣, 自強 or 自強(專); the 自強 ones are told apart by their notes and facilities.
+# TRA car classes as railway.gov.tw labels them. Every class starting with 110 is a 自強號: 自強(3000),
+# 普悠瑪, 太魯閣, 自強 or 自強(專); the plain 自強 ones are told apart by their notes and facilities.
 KIND = {"110G": "E3", "110H": "E3", "110K": "E3", "110M": "E3",  # EMU3000 新自強
         "1107": "PYM",                                           # TEMU2000 普悠瑪
         "1101": "TRK",                                           # TEMU1000 太魯閣
         "1108": "PP", "1109": "PP", "110A": "PP",                # 推拉式 (1109 親子車廂, 110A 自行車)
         "110F": "DMU",                                           # 柴聯自強號
-        "1104": "SP", "1106": "SP"}                              # 自強(專): 加開、觀光專開 (環島之星)
-TZE = "110"
+        "1104": "SP", "1106": "SP",                              # 自強(專): 加開、觀光專開 (環島之星)
+        "1110": "JG", "1112": "JGS",                             # 莒光, 莒光(專)
+        "1132": "QK",                                            # 區間快
+        "1131": "QJ", "1130": "QJS", "1134": "QJS",              # 區間, 區間(專)
+        "1150": "PK"}                                            # 普快(專)
+FALLBACK = {"110": "TC", "111": "JG", "113": "QJ"}  # a new code is shown as its family until added to KIND
 ALIAS = {"1001": "1000"}  # 臺北-環島, where 環島之星 ends its loop, is 臺北
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
@@ -128,12 +132,10 @@ def main(raw_dir, dst):
         for e in zip(p, p[1:]):
             line_of.setdefault(frozenset(e), ln)
 
-    # ── 自強號 schedules, grouped by identical timetable across dates
+    # ── schedules, grouped by identical timetable across dates
     groups, notes, unknown = {}, [], set()
     for di, d in enumerate(days):
         for t in d:
-            if not t["CarClass"].startswith(TZE):
-                continue
             if t["CarClass"] not in KIND:
                 unknown.add(t["CarClass"])
             stops, off, prev = [], 0, -1
@@ -162,7 +164,7 @@ def main(raw_dir, dst):
             mid = path(a, b, banned)[1:-1]
             route += [[c] for c in mid] + [[b, arr, dep]]
         used |= {r[0] for r in route}
-        trains.append({"no": no, "c": cls, "k": KIND.get(cls, "TC"), "l": int(line), "d": int(ldir), "n": ni,
+        trains.append({"no": no, "c": cls, "k": KIND.get(cls) or FALLBACK.get(cls[:3], "OT"), "l": int(line), "d": int(ldir), "n": ni,
                        **({"b": 1} if bike else {}),
                        "days": "".join("1" if i in on else "0" for i in range(len(days))), "r": route})
     trains.sort(key=lambda t: (int(t["no"]), t["r"][0][2]))
@@ -186,13 +188,13 @@ def main(raw_dir, dst):
     per_day = [sum(t["days"][i] == "1" for t in trains) for i in range(len(days))]
     print(f"{len(dates)} days {dates[0]}–{dates[-1]}, {len(stations)} stations, {len(edges)} edges "
           f"({sum(e[2] > 0 for e in out['edges'])} on the loop), {len(trains)} schedules, "
-          f"{min(per_day)}–{max(per_day)} trains/day, {len(used)} stations on 自強號 routes")
-    for k in dict.fromkeys(KIND.values()):
+          f"{min(per_day)}–{max(per_day)} trains/day, {len(used)} stations served")
+    for k in dict.fromkeys([*KIND.values(), *(t["k"] for t in trains)]):
         n = [sum(t["days"][i] == "1" and t["k"] == k for t in trains) for i in range(len(days))]
         print(f"  {k:<4}{min(n)}–{max(n)} trains/day, {len({t['no'] for t in trains if t['k'] == k})} train numbers")
     print("longest edges:", ", ".join(f"{a}–{b} {d:.1f} km" for d, a, b in long))
     if unknown:
-        print(f"::warning::new 自強 car classes {', '.join(sorted(unknown))} are shown as plain 自強; add them to KIND")
+        print(f"::warning::new car classes {', '.join(sorted(unknown))} are shown by family; add them to KIND")
 
 
 if __name__ == "__main__":
